@@ -101,7 +101,9 @@ export default function WorkspaceActivePage() {
             ) : (
               <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${isSelected ? "bg-white" : "bg-[#8b5cf6]"} hover:text-white`} />
             )}
-            <span className={`text-[13px] ${isSelected ? "text-white font-medium" : "text-[#475569]"} hover:text-white`}>
+            <span className={`text-[13px] ${isSelected ? "text-white font-medium" : "text-[#475569]"} group-hover:text-white 
+              ${item.modify && 'text-[#fb923c]'}
+            `}>
               {item.label}
             </span>
           </div>
@@ -188,9 +190,9 @@ export default function WorkspaceActivePage() {
                 <span className="text-[12px] text-[#475569]">변경 전 원본 시나리오</span>
               </div>
               <div className="flex-1 border border-[#e4eaf2] rounded-xl p-4 bg-[#f8fafc]">
-                <p className="text-[12px] text-[#94a3b8] leading-relaxed">
+                <textarea className="text-[12px] text-[#94a3b8] leading-relaxed w-full h-full resize-none">
                   예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개...
-                </p>
+                </textarea>
               </div>
             </div>
 
@@ -201,9 +203,9 @@ export default function WorkspaceActivePage() {
                 <span className="text-[12px] text-[#8b5cf6]">변경 후 시나리오 (렌더링 대상)</span>
               </div>
               <div className="flex-1 border border-[#e4eaf2] rounded-xl p-4 bg-white">
-                <p className="text-[12px] text-[#94a3b8] leading-relaxed">
+                <textarea className="text-[12px] text-[#94a3b8] leading-relaxed w-full h-full resize-none">
                   예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개...
-                </p>
+                </textarea>
               </div>
             </div>
           </div>
@@ -287,7 +289,7 @@ export default function WorkspaceActivePage() {
           <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
             {activeTab === "PREVIEW" && (
               /* iPhone Frame */
-              <div className="w-[280px] h-[580px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl">
+              <div className="w-[453px] h-[877px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl">
                 <div className="w-full h-full bg-[#f5f5f5] rounded-[32px] relative overflow-hidden">
                   {/* Notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-[#1a1a1a] rounded-b-2xl" />
@@ -321,13 +323,15 @@ export default function WorkspaceActivePage() {
                   ].map((step, i) => (
                     <div key={step.num} className="flex gap-4">
                       <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center text-[13px] font-semibold">
+                        <div className={`w-8 h-8 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center text-[13px] font-semibold 
+                            ${step.modify && 'bg-[#fb923c]'}
+                          `}>
                           {step.num}
                         </div>
                         {i < 3 && <div className="w-0.5 flex-1 bg-[#e4eaf2] mt-2" />}
                       </div>
                       <div className="flex-1 pb-6">
-                        <h3 className="text-[15px] font-semibold text-[#0f172a] mb-2">{step.title}</h3>
+                        <h3 className={`text-[15px] font-semibold text-[#0f172a] mb-2 ${step.modify && 'text-[#fb923c]'}`}>{step.title}</h3>
                         <p className="text-[13px] text-[#64748b] leading-relaxed">{step.desc}</p>
                       </div>
                     </div>
@@ -359,7 +363,7 @@ export default function WorkspaceActivePage() {
     D --> E[고객지원 및 공지사항]
     
     style A fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
-    style B fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
+    style B fill:#fb923c,stroke:#fb923c,color:#fff
     style C fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
     style D fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
     style E fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b`}

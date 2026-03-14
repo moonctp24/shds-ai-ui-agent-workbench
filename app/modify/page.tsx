@@ -42,7 +42,7 @@ export default function Sub1Page() {
           label: "Body",
           level: 1,
           children: [
-            { id: "top-banner", label: "최상단 배너", level: 2 },
+            { id: "top-banner", label: "최상단 배너", level: 2, modify:true },
             { id: "depth2-list", label: "deth 2 - ui렌더링 된 리스트", level: 2 },
             {
               id: "shortcuts",
@@ -84,7 +84,7 @@ export default function Sub1Page() {
         <div
           className={`flex items-center justify-between py-2 px-3 rounded-lg cursor-pointer transition-colors ${
             isSelected ? "bg-[#8b5cf6] text-white" : "hover:bg-[#121726]"
-          }`}
+          } group`}
           style={{ paddingLeft: `${paddingLeft}px` }}
           onClick={() => {
             setSelectedItem(item.id)
@@ -99,9 +99,11 @@ export default function Sub1Page() {
                 <ChevronRight className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#64748b]"}`} />
               )
             ) : (
-              <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${isSelected ? "bg-white" : "bg-[#8b5cf6]"}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${isSelected ? "bg-white" : "bg-[#8b5cf6]"} group-hover:text-white`} />
             )}
-            <span className={`text-[13px] ${isSelected ? "text-white font-medium" : "text-[#475569]"}`}>
+            <span className={`text-[13px] ${isSelected ? "text-white font-medium" : "text-[#475569]"} group-hover:text-white 
+              ${item.modify && 'text-[#fb923c]'}
+            `}>
               {item.label}
             </span>
           </div>
@@ -188,9 +190,9 @@ export default function Sub1Page() {
                 <span className="text-[12px] text-[#475569]">변경 전 원본 시나리오</span>
               </div>
               <div className="flex-1 border border-[#e4eaf2] rounded-xl p-4 bg-[#f8fafc]">
-                <p className="text-[12px] text-[#94a3b8] leading-relaxed">
+                <textarea className="text-[12px] text-[#94a3b8] leading-relaxed w-full h-full resize-none">
                   예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개...
-                </p>
+                </textarea>
               </div>
             </div>
 
@@ -200,10 +202,10 @@ export default function Sub1Page() {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
                 <span className="text-[12px] text-[#8b5cf6]">변경 후 시나리오 (렌더링 대상)</span>
               </div>
-              <div className="flex-1 border border-[#8b5cf6] rounded-xl p-4 bg-white">
-                <p className="text-[12px] text-[#0f172a] leading-relaxed">
+              <div className="flex-1 border border-[#fb923c] rounded-xl p-4 bg-white">
+                <textarea className="text-[12px] text-[#0f172a] leading-relaxed w-full h-full resize-none">
                   아이콘 몇개
-                </p>
+                </textarea>
               </div>
             </div>
           </div>
@@ -287,7 +289,7 @@ export default function Sub1Page() {
           <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
             {activeTab === "PREVIEW" && (
               /* iPhone Frame */
-              <div className="w-[280px] h-[580px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl">
+              <div className="w-[453px] h-[877px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl">
                 <div className="w-full h-full bg-white rounded-[32px] relative overflow-hidden">
                   {/* Notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-[#1a1a1a] rounded-b-2xl z-10" />
@@ -322,19 +324,21 @@ export default function Sub1Page() {
                 <div className="space-y-6">
                   {[
                     { num: 1, title: "헤더 네비게이션", desc: "헤더 컴포넌트 : 텍스트와 아이콘 버튼 정렬 여러개, 최우측엔 메뉴버튼, 필요한 아이콘/픽토그램은 랜덤으로 구성" },
-                    { num: 2, title: "최상단 배너 영역", desc: "최상단 : 통 이미지 배너" },
+                    { num: 2, modify:true, title: "최상단 배너 영역", desc: "최상단 : 통 이미지 배너" },
                     { num: 3, title: "페이 서비스 리스트 (모듈2)", desc: "모듈2: 리스트+버튼 모듈 / 전체 높이값 AUTO / 모듈 상단: 제목문구 '페이' / 문구옆 화살표 버튼" },
                     { num: 4, title: "슈퍼솔 로고 및 바로가기 (모듈4)", desc: "모듈4: 이미지 + 버튼 1줄 / 레이아웃 한줄로 중앙 정렬" }
                   ].map((step, i) => (
                     <div key={step.num} className="flex gap-4">
                       <div className="flex flex-col items-center">
-                        <div className="w-8 h-8 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center text-[13px] font-semibold">
+                        <div className={`w-8 h-8 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center text-[13px] font-semibold 
+                            ${step.modify && 'bg-[#fb923c]'}
+                          `}>
                           {step.num}
                         </div>
                         {i < 3 && <div className="w-0.5 flex-1 bg-[#e4eaf2] mt-2" />}
                       </div>
                       <div className="flex-1 pb-6">
-                        <h3 className="text-[15px] font-semibold text-[#0f172a] mb-2">{step.title}</h3>
+                        <h3 className={`text-[15px] font-semibold text-[#0f172a] mb-2 ${step.modify && 'text-[#fb923c]'}`}>{step.title}</h3>
                         <p className="text-[13px] text-[#64748b] leading-relaxed">{step.desc}</p>
                       </div>
                     </div>
@@ -366,7 +370,7 @@ export default function Sub1Page() {
     D --> E[고객지원 및 공지사항]
     
     style A fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
-    style B fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
+    style B fill:#fb923c,stroke:#fb923c,color:#fff
     style C fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
     style D fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
     style E fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b`}
