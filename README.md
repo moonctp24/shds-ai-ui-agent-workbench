@@ -25,10 +25,10 @@
 
 
 app
-    - /design-system : 퍼블리싱 디자인 시스템
-    - /null : 최초진입, 시나리오 없을때
-    - /modify : 수정했을때 효과
-    - /modal : 팝업 모음
-    - /toast : 토스트 모음
+  - /design-system : 퍼블리싱 디자인 시스템
+  - /null : 최초진입, 시나리오 없을때
+  - /modify : 수정했을때 효과
+  - /modal : 팝업 모음
+  - /toast : 토스트 모음
 
 
