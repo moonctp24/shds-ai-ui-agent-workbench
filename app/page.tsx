@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Check, Maximize2, Layers, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Trash2, GitBranch, Code2 } from "lucide-react"
 import dynamic from "next/dynamic"
 import { learnedProject, NodeDetail, TreeNode } from "@/lib/learned-project"
@@ -70,6 +70,16 @@ export default function WorkspaceActivePage() {
   }, [selectedItem, treeData])
 
   const isHighlighted = (id: string) => highlightIds.includes(id)
+
+  useEffect(() => {
+    if (!selectedItem) return
+    const detail = nodeDetails[selectedItem] ?? nodeDetails.root
+    if (!detail) return
+    setOriginalScenario(detail.doc)
+    if (!modifiedNodes.includes(selectedItem)) {
+      setModifiedScenario(detail.doc)
+    }
+  }, [nodeDetails, selectedItem, modifiedNodes])
 
   const collectExpandedIds = (items: TreeItem[]) => {
     const ids: string[] = []

@@ -239,7 +239,7 @@ export const learnedProject: LearnedProject = {
     },
     "preview-frame": {
       title: "프리뷰 프레임",
-      doc: "아이폰 스타일 프레임과 스크린 영역을 감싸는 컨테이너.",
+      doc: "아이폰 스타일 프레임과 스크린 영역을 감싸는 컨테이너입니다. 사용자는 이 프레임 안에서 실제 화면이 렌더링되는 것처럼 확인합니다.",
       previewSummary: ["프리뷰 프레임", "스크린 영역", "노치"],
       flowSteps: [{ title: "프레임 렌더", desc: "기기 프레임 표시" }],
       diagram: 'flowchart LR\n  A["프리뷰 프레임"] --> B["스크린 영역"]',
@@ -248,7 +248,7 @@ export const learnedProject: LearnedProject = {
     },
     "preview-device": {
       title: "프레임 컨테이너",
-      doc: "iPhone 프레임 외곽 컨테이너를 그린다.",
+      doc: "iPhone 프레임 외곽 컨테이너를 그립니다. 라운드 프레임과 외곽 쉐도우를 포함합니다.",
       previewSummary: ["iPhone 프레임", "그림자"],
       flowSteps: [{ title: "외곽 프레임", desc: "라운드 프레임 표시" }],
       diagram: 'flowchart TB\n  A["프레임 컨테이너"]',
@@ -257,7 +257,7 @@ export const learnedProject: LearnedProject = {
     },
     "preview-screen": {
       title: "스크린 영역",
-      doc: "프레임 내부의 화면 영역.",
+      doc: "프레임 내부의 화면 영역입니다. 실제 콘텐츠가 배치되는 화면 배경을 구성합니다.",
       previewSummary: ["스크린 배경", "콘텐츠 영역"],
       flowSteps: [{ title: "스크린 렌더", desc: "콘텐츠 표시 영역 제공" }],
       diagram: 'flowchart TB\n  A["스크린 영역"]',
@@ -266,7 +266,7 @@ export const learnedProject: LearnedProject = {
     },
     "preview-notch": {
       title: "노치",
-      doc: "상단 노치 장식 요소.",
+      doc: "상단 노치 장식 요소입니다. 기기 느낌을 강조하기 위한 시각적 요소입니다.",
       previewSummary: ["노치", "상단 장식"],
       flowSteps: [{ title: "노치 표시", desc: "상단 중앙 노치 렌더" }],
       diagram: 'flowchart TB\n  A["노치"]',
@@ -275,7 +275,7 @@ export const learnedProject: LearnedProject = {
     },
     "preview-content": {
       title: "스크린 콘텐츠",
-      doc: "스크린 내부에 카드 정보 컴포넌트들을 렌더링하는 영역.",
+      doc: "스크린 내부에 카드 정보 컴포넌트들을 렌더링하는 영역입니다. 대시보드, 카드 리스트, 카드 개수 표시가 순차로 배치됩니다.",
       previewSummary: ["대시보드 카드", "카드 리스트", "카드 개수 표시"],
       flowSteps: [{ title: "콘텐츠 렌더", desc: "스크롤 가능한 콘텐츠 출력" }],
       diagram: 'flowchart TB\n  A["스크린 콘텐츠"] --> B["컴포넌트들"]',
@@ -285,7 +285,7 @@ export const learnedProject: LearnedProject = {
     dashboard: {
       title: "내 카드 관리 대시보드",
       doc:
-        "상단 요약 배너로, 총 이용 한도와 결제 예정 금액을 계산해 보여준다.",
+        "상단 요약 배너입니다. 총 이용 한도, 총 결제 예정 금액, 정상/일시정지 카드 수를 요약해서 보여줍니다.",
       previewSummary: [
         "상단 요약 배너: 내 카드 관리 대시보드",
         "보유 카드 리스트: 카드 3장",
@@ -318,7 +318,7 @@ export const learnedProject: LearnedProject = {
     },
     "dashboard-card": {
       title: "대시보드 카드",
-      doc: "대시보드 요약 정보를 담는 카드 컨테이너.",
+      doc: "대시보드 요약 정보를 담는 카드 컨테이너입니다. 헤더와 요약 지표 그리드를 포함합니다.",
       previewSummary: ["요약 카드", "헤더 + 지표 그리드"],
       flowSteps: [{ title: "카드 렌더", desc: "대시보드 요약 표시" }],
       diagram: 'flowchart TB\n  A["대시보드 카드"]',
@@ -327,7 +327,7 @@ export const learnedProject: LearnedProject = {
     },
     "dashboard-header": {
       title: "대시보드 헤더",
-      doc: "대시보드 제목/설명과 버전 배지를 표시한다.",
+      doc: "대시보드 제목/설명과 버전 배지를 표시합니다.",
       previewSummary: ["제목", "설명", "버전 배지"],
       flowSteps: [{ title: "헤더 표시", desc: "타이틀/버전 렌더" }],
       diagram: 'flowchart LR\n  A["헤더"] --> B["버전 배지"]',
@@ -336,7 +336,7 @@ export const learnedProject: LearnedProject = {
     },
     "dashboard-metrics": {
       title: "요약 지표 그리드",
-      doc: "총 이용 한도/결제 예정/정상·일시정지 카드 수를 그리드로 배치한다.",
+      doc: "총 이용 한도, 결제 예정 금액, 정상/일시정지 카드 수를 2x2 그리드로 배치합니다.",
       previewSummary: ["4개 지표 카드", "2x2 그리드"],
       flowSteps: [{ title: "지표 렌더", desc: "각 지표 카드 표시" }],
       diagram: 'flowchart TB\n  A["요약 지표 그리드"] --> B["지표 카드들"]',
@@ -345,7 +345,7 @@ export const learnedProject: LearnedProject = {
     },
     "metric-total-limit": {
       title: "총 이용 한도",
-      doc: "전체 카드의 이용 한도 합계를 표시한다.",
+      doc: "전체 카드의 이용 한도 합계를 표시합니다.",
       previewSummary: ["총 이용 한도"],
       flowSteps: [{ title: "한도 합산", desc: "카드 한도 합계 표시" }],
       diagram: 'flowchart TB\n  A["총 이용 한도"]',
@@ -354,7 +354,7 @@ export const learnedProject: LearnedProject = {
     },
     "metric-total-billing": {
       title: "총 결제 예정 금액",
-      doc: "전체 카드의 결제 예정 금액 합계를 표시한다.",
+      doc: "전체 카드의 결제 예정 금액 합계를 표시합니다.",
       previewSummary: ["총 결제 예정 금액"],
       flowSteps: [{ title: "결제 합산", desc: "결제 예정 합계 표시" }],
       diagram: 'flowchart TB\n  A["총 결제 예정 금액"]',
@@ -363,7 +363,7 @@ export const learnedProject: LearnedProject = {
     },
     "metric-active-cards": {
       title: "정상 이용 카드",
-      doc: "정상 이용 중인 카드 수를 표시한다.",
+      doc: "정상 이용 중인 카드 수를 표시합니다.",
       previewSummary: ["정상 이용 카드 수"],
       flowSteps: [{ title: "정상 카드 카운트", desc: "정상 카드 수 표시" }],
       diagram: 'flowchart TB\n  A["정상 이용 카드"]',
@@ -372,7 +372,7 @@ export const learnedProject: LearnedProject = {
     },
     "metric-paused-cards": {
       title: "일시정지 카드",
-      doc: "일시정지 상태 카드 수를 표시한다.",
+      doc: "일시정지 상태 카드 수를 표시합니다.",
       previewSummary: ["일시정지 카드 수"],
       flowSteps: [{ title: "일시정지 카드 카운트", desc: "일시정지 수 표시" }],
       diagram: 'flowchart TB\n  A["일시정지 카드"]',
@@ -382,7 +382,7 @@ export const learnedProject: LearnedProject = {
     "card-list": {
       title: "보유카드 리스트",
       doc:
-        "cards 배열을 순회해 카드 요약 카드 3장을 렌더링한다.",
+        "보유 카드 리스트입니다. 카드 아이템 그룹(카드 3장)과 리스트 헤더(카드 개수 표시)를 포함합니다.",
       previewSummary: [
         "상단 요약 배너: 내 카드 관리 대시보드",
         "보유 카드 리스트: 카드 3장",
@@ -417,7 +417,7 @@ export const learnedProject: LearnedProject = {
     },
     "card-list-card": {
       title: "리스트 카드",
-      doc: "보유 카드 리스트를 감싸는 카드 컨테이너.",
+      doc: "보유 카드 리스트를 감싸는 카드 컨테이너입니다. 리스트 헤더와 카드 아이템 그룹을 포함합니다.",
       previewSummary: ["리스트 컨테이너"],
       flowSteps: [{ title: "리스트 렌더", desc: "리스트 카드 영역 표시" }],
       diagram: 'flowchart TB\n  A["리스트 카드"]',
@@ -426,10 +426,20 @@ export const learnedProject: LearnedProject = {
     },
     "card-list-header": {
       title: "리스트 헤더",
-      doc: "보유 카드 리스트 제목과 카드 개수를 표시한다.",
+      doc: "보유 카드 리스트 제목과 카드 개수를 표시합니다.",
       previewSummary: ["리스트 제목", "총 3장"],
       flowSteps: [{ title: "헤더 표시", desc: "제목/개수 출력" }],
       diagram: 'flowchart LR\n  A["리스트 헤더"]',
+      codeFiles: [],
+      status: "complete"
+    },
+    "card-items": {
+      title: "카드 아이템 그룹",
+      doc:
+        "사용자가 보유하고 있는 카드 정보를 보여줍니다. 포함하는 정보는 카드 이미지, 카드명, 본인 여부, 카드번호 뒷 4자리, 이용한도, 결제 예정 금액 이 있습니다.",
+      previewSummary: ["카드 아이템 목록", "카드 정보 요약"],
+      flowSteps: [{ title: "카드 아이템 렌더", desc: "보유 카드별 요약 정보 출력" }],
+      diagram: 'flowchart TB\n  A["카드 아이템 그룹"] --> B["카드1/카드2/카드3"]',
       codeFiles: [],
       status: "complete"
     },
@@ -528,7 +538,7 @@ export const learnedProject: LearnedProject = {
     "card-count": {
       title: "카드 개수 표시",
       doc:
-        "보유 카드 개수를 텍스트로 표시한다.",
+        "보유 카드 개수를 텍스트로 표시합니다. 리스트 헤더의 카드 개수와 동일한 정보를 강조합니다.",
       previewSummary: [
         "상단 요약 배너: 내 카드 관리 대시보드",
         "보유 카드 리스트: 카드 3장",
@@ -553,7 +563,7 @@ export const learnedProject: LearnedProject = {
     },
     "card-count-card": {
       title: "개수 표시 카드",
-      doc: "카드 개수를 강조 표시하는 카드 컨테이너.",
+      doc: "카드 개수를 강조 표시하는 카드 컨테이너입니다. 좌측 텍스트와 우측 숫자 배지를 포함합니다.",
       previewSummary: ["카드 개수 강조"],
       flowSteps: [{ title: "개수 표시", desc: "3장 표시" }],
       diagram: 'flowchart TB\n  A["개수 표시 카드"]',
