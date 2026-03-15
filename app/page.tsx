@@ -1,71 +1,99 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Check, Maximize2, Layers, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Trash2, GitBranch, Code2 } from "lucide-react"
 import dynamic from "next/dynamic"
+import { learnedProject, NodeDetail, TreeNode } from "@/lib/learned-project"
 
 const MermaidDiagram = dynamic(() => import("@/components/mermaid-diagram"), { ssr: false })
 
-interface TreeItem {
-  id: string
-  label: string
-  level: number
-  isExpanded?: boolean
-  isSelected?: boolean
-  children?: TreeItem[]
-}
+type TreeItem = TreeNode
 
 export default function WorkspaceActivePage() {
   const [activeTab, setActiveTab] = useState("PREVIEW")
   const [activeRenderMode, setActiveRenderMode] = useState<"batch" | "individual">("batch")
-  const [expandedItems, setExpandedItems] = useState<string[]>(["root", "header", "body", "shortcuts", "footer"])
-  const [selectedItem, setSelectedItem] = useState<string>("header-component")
+  const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const [selectedItem, setSelectedItem] = useState<string | null>(null)
+  const [projectName, setProjectName] = useState("분석 대기")
+  const [projectVersion, setProjectVersion] = useState("-")
+  const [treeData, setTreeData] = useState<TreeItem[]>([])
+  const [nodeDetails, setNodeDetails] = useState<Record<string, NodeDetail>>({})
+  const [originalScenario, setOriginalScenario] = useState("")
+  const [modifiedScenario, setModifiedScenario] = useState("")
+  const [modifiedNodes, setModifiedNodes] = useState<string[]>([])
 
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
 
-  const treeData: TreeItem[] = [
-    {
-      id: "root",
-      label: "신한카드 메인 기획",
-      level: 0,
-      children: [
-        {
-          id: "header",
-          label: "Header",
-          level: 1,
-          children: [
-            { id: "header-component", label: "헤더 컴포넌트", level: 2 }
-          ]
-        },
-        {
-          id: "body",
-          label: "Body",
-          level: 1,
-          children: [
-            { id: "top-banner", label: "최상단 배너", level: 2 },
-            { id: "depth2-list", label: "deth 2 - ui렌더링 된 리스트", level: 2 },
-            {
-              id: "shortcuts",
-              label: "슈퍼솔 로고 및 바로가기 (모듈4)",
-              level: 2,
-              children: [
-                { id: "logo-image", label: "로고 이미지", level: 3 },
-                { id: "shortcut-button", label: "바로가기 버튼", level: 3 }
-              ]
-            }
-          ]
-        },
-        {
-          id: "footer",
-          label: "Footer",
-          level: 1,
-          children: [
-            { id: "support", label: "고객지원 및 공지사항", level: 2 }
-          ]
+  const selectedDetail = useMemo(() => {
+    if (selectedItem && nodeDetails[selectedItem]) return nodeDetails[selectedItem]
+    return nodeDetails.root
+  }, [nodeDetails, selectedItem])
+
+  const isModified = selectedItem ? modifiedNodes.includes(selectedItem) : false
+  const selectedLabel = useMemo(() => {
+    if (!selectedItem) return undefined
+    const findLabel = (nodes: TreeItem[]): string | undefined => {
+      for (const node of nodes) {
+        if (node.id === selectedItem) return node.label
+        if (node.children?.length) {
+          const found = findLabel(node.children)
+          if (found) return found
         }
-      ]
+      }
+      return undefined
     }
-  ]
+    return findLabel(treeData)
+  }, [selectedItem, treeData])
+  const highlightIds = useMemo(() => {
+    if (!selectedItem || treeData.length === 0) return []
+    const collect = (node: TreeItem): string[] => {
+      const ids = [node.id]
+      if (node.children?.length) {
+        node.children.forEach(child => {
+          ids.push(...collect(child))
+        })
+      }
+      return ids
+    }
+    const findNode = (nodes: TreeItem[]): TreeItem | undefined => {
+      for (const node of nodes) {
+        if (node.id === selectedItem) return node
+        if (node.children?.length) {
+          const found = findNode(node.children)
+          if (found) return found
+        }
+      }
+      return undefined
+    }
+    const target = findNode(treeData)
+    return target ? collect(target) : [selectedItem]
+  }, [selectedItem, treeData])
+
+  const isHighlighted = (id: string) => highlightIds.includes(id)
+
+  const collectExpandedIds = (items: TreeItem[]) => {
+    const ids: string[] = []
+    const walk = (nodes: TreeItem[]) => {
+      nodes.forEach(node => {
+        ids.push(node.id)
+        if (node.children?.length) walk(node.children)
+      })
+    }
+    walk(items)
+    return ids
+  }
+
+  const handleAnalyzeScenario = () => {
+    setTreeData(learnedProject.tree)
+    setNodeDetails(learnedProject.details)
+    setProjectName(learnedProject.name)
+    setProjectVersion(learnedProject.version)
+    setOriginalScenario(learnedProject.scenarioOriginal)
+    setModifiedScenario(learnedProject.scenarioOriginal)
+    setSelectedItem("root")
+    setExpandedItems(collectExpandedIds(learnedProject.tree))
+    setModifiedNodes([])
+  }
 
   const toggleExpand = (id: string) => {
     setExpandedItems(prev => 
@@ -77,6 +105,8 @@ export default function WorkspaceActivePage() {
     const hasChildren = item.children && item.children.length > 0
     const isExpanded = expandedItems.includes(item.id)
     const isSelected = selectedItem === item.id
+    const isNodeModified = modifiedNodes.includes(item.id)
+    const nodeStatus = nodeDetails[item.id]?.status ?? "pending"
     const paddingLeft = depth * 20 + 8
 
     return (
@@ -86,23 +116,35 @@ export default function WorkspaceActivePage() {
             isSelected ? "bg-[#8b5cf6] text-white" : "hover:bg-[#121726] hover:text-white"
           }`}
           style={{ paddingLeft: `${paddingLeft}px` }}
-          onClick={() => {
-            setSelectedItem(item.id)
-            if (hasChildren) toggleExpand(item.id)
-          }}
+          onClick={() => setSelectedItem(item.id)}
         >
           <div className={`flex items-center gap-2`}>
             {hasChildren ? (
-              isExpanded ? (
-                <ChevronDown className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#64748b]"}`} />
-              ) : (
-                <ChevronRight className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#64748b]"}`} />
-              )
+              <button
+                type="button"
+                className="w-5 h-5 flex items-center justify-center rounded hover:bg-black/10"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  toggleExpand(item.id)
+                }}
+                aria-label={isExpanded ? "트리 접기" : "트리 펼치기"}
+              >
+                {isExpanded ? (
+                  <ChevronDown className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#64748b]"}`} />
+                ) : (
+                  <ChevronRight className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#64748b]"}`} />
+                )}
+              </button>
             ) : (
               <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${isSelected ? "bg-white" : "bg-[#8b5cf6]"} hover:text-white`} />
             )}
+            <span
+              className={`w-2 h-2 rounded-full ${
+                nodeStatus === "complete" ? "bg-[#10b981]" : "bg-[#cbd5f5]"
+              }`}
+            />
             <span className={`text-[13px] ${isSelected ? "text-white font-medium" : "text-[#475569]"} group-hover:text-white 
-              ${item.modify && 'text-[#fb923c]'}
+              ${isNodeModified ? "text-[#fb923c]" : ""}
             `}>
               {item.label}
             </span>
@@ -130,18 +172,21 @@ export default function WorkspaceActivePage() {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Scenario Editor */}
-        <aside className="flex-[1] flex flex-col bg-white overflow-hidden">
+        <aside className="flex-1 flex flex-col bg-white overflow-hidden">
           {/* Workspace Header */}
           <div className="flex items-center gap-2.5 px-5 py-4">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center shadow-sm">
               <Layers className="w-4 h-4 text-white" />
             </div>
             <span className="text-[15px] font-semibold text-[#0f172a]">Workspace</span>
           </div>
 
           <div className="flex-1 flex flex-col p-5 overflow-hidden">
-            {/* Scenario Tree Analysis Button - Disabled state */}
-            <button className="w-full h-11 bg-[#f1f5f9] text-[#94a3b8] rounded-lg flex items-center justify-center gap-2 mb-4 cursor-not-allowed">
+            {/* Scenario Tree Analysis Button */}
+            <button
+              className="w-full h-11 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg flex items-center justify-center gap-2 mb-4 transition-colors"
+              onClick={handleAnalyzeScenario}
+            >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="9" cy="3" r="2" stroke="currentColor" strokeWidth="1.5"/>
                 <circle cx="4" cy="11" r="2" stroke="currentColor" strokeWidth="1.5"/>
@@ -150,6 +195,24 @@ export default function WorkspaceActivePage() {
               </svg>
               <span className="text-[14px] font-medium">시나리오 트리 분석</span>
             </button>
+
+            {/* Spec Viewer */}
+            <div className="border border-[#e4eaf2] rounded-xl p-4 bg-white mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-semibold text-[#475569] tracking-widest">SPEC VIEWER</span>
+                {selectedDetail?.status && (
+                  <span className="px-2 py-0.5 bg-[#f1f5f9] text-[#64748b] text-[10px] font-medium rounded">
+                    {selectedDetail.status === "complete" ? "Ready" : "Pending"}
+                  </span>
+                )}
+              </div>
+              <h3 className="text-[13px] font-semibold text-[#0f172a] mb-2">
+                {selectedDetail?.title ?? "분석 대기"}
+              </h3>
+              <p className="text-[12px] text-[#64748b] leading-relaxed">
+                {selectedDetail?.doc ?? "시나리오 트리 분석을 실행하면 선택한 컴포넌트의 기획서가 표시됩니다."}
+              </p>
+            </div>
 
             {/* Render Mode Toggle */}
             <div className="flex gap-2 mb-6">
@@ -180,7 +243,9 @@ export default function WorkspaceActivePage() {
             {/* Scenario Editor Header */}
             <div className="flex items-center justify-between mb-3">
               <span className="text-[11px] font-semibold text-[#475569] tracking-widest">SCENARIO EDITOR</span>
-              <span className="px-2 py-0.5 bg-[#f1f5f9] text-[#64748b] text-[10px] font-medium rounded">Auto Saved</span>
+              <span className="px-2 py-0.5 bg-[#f1f5f9] text-[#64748b] text-[10px] font-medium rounded">
+                {modifiedScenario && modifiedScenario !== originalScenario ? "Edited" : "Auto Saved"}
+              </span>
             </div>
 
             {/* Original Scenario */}
@@ -190,9 +255,12 @@ export default function WorkspaceActivePage() {
                 <span className="text-[12px] text-[#475569]">변경 전 원본 시나리오</span>
               </div>
               <div className="flex-1 border border-[#e4eaf2] rounded-xl p-4 bg-[#f8fafc]">
-                <textarea className="text-[12px] text-[#94a3b8] leading-relaxed w-full h-full resize-none">
-                  예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개...
-                </textarea>
+                <textarea
+                  className="text-[12px] text-[#94a3b8] leading-relaxed w-full h-full resize-none"
+                  value={originalScenario}
+                  placeholder="예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개..."
+                  readOnly
+                />
               </div>
             </div>
 
@@ -203,9 +271,23 @@ export default function WorkspaceActivePage() {
                 <span className="text-[12px] text-[#8b5cf6]">변경 후 시나리오 (렌더링 대상)</span>
               </div>
               <div className="flex-1 border border-[#e4eaf2] rounded-xl p-4 bg-white">
-                <textarea className="text-[12px] text-[#94a3b8] leading-relaxed w-full h-full resize-none">
-                  예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개...
-                </textarea>
+                <textarea
+                  className="text-[12px] text-[#0f172a] leading-relaxed w-full h-full resize-none"
+                  value={modifiedScenario}
+                  placeholder="예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개..."
+                  onChange={(event) => {
+                    const value = event.target.value
+                    setModifiedScenario(value)
+                    if (!selectedItem) return
+                    if (value && value !== originalScenario) {
+                      setModifiedNodes(prev =>
+                        prev.includes(selectedItem) ? prev : [...prev, selectedItem]
+                      )
+                    } else {
+                      setModifiedNodes(prev => prev.filter(id => id !== selectedItem))
+                    }
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -238,22 +320,28 @@ export default function WorkspaceActivePage() {
           </div>
 
           {/* Center Content */}
-          <div className="flex-1 px-6 pb-6 flex flex-col">
+          <div className="flex-1 px-6 pb-6 flex flex-col min-h-0">
             {/* Active Plan Banner */}
             <div className="bg-[#0f172a] rounded-xl px-5 py-4 mb-4 flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-white/70 uppercase tracking-wider">ACTIVE PLAN</span>
-                <h2 className="text-[16px] font-semibold text-white mt-0.5">신한카드 메인 기획</h2>
+                <h2 className="text-[16px] font-semibold text-white mt-0.5">{projectName}</h2>
               </div>
               <div className="text-right">
-                <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-medium rounded">v1.0</span>
-                <p className="text-[10px] text-white/70 mt-1">Stable Build</p>
+                <span className="px-2 py-0.5 bg-white/20 text-white text-[10px] font-medium rounded">{projectVersion}</span>
+                <p className="text-[10px] text-white/70 mt-1">Scenario Build</p>
               </div>
             </div>
 
             {/* Tree Structure */}
-            <div className="flex-1 overflow-y-auto">
-              {treeData.map(item => renderTreeItem(item))}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {treeData.length > 0 ? (
+                treeData.map(item => renderTreeItem(item))
+              ) : (
+                <div className="border border-dashed border-[#c8d2e1] rounded-xl flex items-center justify-center h-full">
+                  <span className="text-[12px] text-[#94a3b8]">시나리오 트리 분석을 실행하세요</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -289,14 +377,130 @@ export default function WorkspaceActivePage() {
           <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
             {activeTab === "PREVIEW" && (
               /* iPhone Frame */
-              <div className="w-[453px] h-[877px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl">
-                <div className="w-full h-full bg-[#f5f5f5] rounded-[32px] relative overflow-hidden">
+              <div className={`w-[453px] h-[877px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl ${isHighlighted("preview-device") ? "ring-2 ring-[#fb923c]" : ""}`}>
+                <div className={`w-full h-full bg-[#f5f5f5] rounded-[32px] relative overflow-hidden ${isHighlighted("preview-screen") ? "ring-2 ring-[#fb923c]" : ""}`}>
                   {/* Notch */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-[#1a1a1a] rounded-b-2xl" />
+                  <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-[#1a1a1a] rounded-b-2xl ${isHighlighted("preview-notch") ? "ring-2 ring-[#fb923c]" : ""}`} />
                   
                   {/* Screen Content */}
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-[13px] text-[#94a3b8]">Preview</span>
+                  <div className={`w-full h-full overflow-y-auto px-5 pt-10 pb-6 ${isHighlighted("preview-content") ? "ring-2 ring-[#fb923c]" : ""}`}>
+                  {treeData.length === 0 ? (
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-[13px] text-[#94a3b8]">프리뷰 준비 완료</p>
+                        <p className="text-[11px] text-[#cbd5f5] mt-2">시나리오 트리 분석을 실행하세요</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                  <div
+                    className={`mb-4 rounded-xl bg-white p-4 shadow-sm ${isHighlighted("preview-spec") ? "ring-2 ring-[#fb923c]" : ""}`}
+                  >
+                    <h3 className="text-[14px] font-semibold text-[#0f172a] mb-2">
+                      {selectedDetail?.title ?? selectedLabel ?? "Preview"}
+                    </h3>
+                    <p className="text-[12px] text-[#64748b] leading-relaxed">
+                      {selectedDetail?.doc ?? "선택한 요소의 상세 정보가 아직 없습니다."}
+                    </p>
+                  </div>
+                  <div
+                    className={`mt-4 rounded-xl p-4 shadow-sm border ${
+                      isHighlighted("dashboard-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
+                    }`}
+                  >
+                    <div className={`flex items-start justify-between gap-3 ${isHighlighted("dashboard-header") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
+                      <div className={isHighlighted("dashboard-title") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
+                        <h4 className="text-[13px] font-semibold text-[#0f172a]">내 카드 관리 대시보드</h4>
+                        <p className="text-[11px] text-[#94a3b8] mt-1">보유 카드 현황과 결제 예정 금액 요약</p>
+                      </div>
+                      <span className={`text-[10px] text-white bg-[#4f46e5] px-2 py-1 rounded-full ${isHighlighted("dashboard-badge") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
+                        v1.0
+                      </span>
+                    </div>
+                    <div className={`mt-3 grid grid-cols-2 gap-2 ${isHighlighted("dashboard-metrics") ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
+                      <div className={`rounded-lg bg-[#f1f5f9] p-2 ${isHighlighted("metric-total-limit") ? "ring-2 ring-[#fb923c]" : ""}`}>
+                        <p className="text-[10px] text-[#64748b]">총 이용 한도</p>
+                        <p className="text-[12px] font-semibold text-[#0f172a]">₩9,000,000</p>
+                      </div>
+                      <div className={`rounded-lg bg-[#f1f5f9] p-2 ${isHighlighted("metric-total-billing") ? "ring-2 ring-[#fb923c]" : ""}`}>
+                        <p className="text-[10px] text-[#64748b]">총 결제 예정 금액</p>
+                        <p className="text-[12px] font-semibold text-[#0f172a]">₩4,350,000</p>
+                      </div>
+                      <div className={`rounded-lg bg-[#f8fafc] p-2 ${isHighlighted("metric-active-cards") ? "ring-2 ring-[#fb923c]" : ""}`}>
+                        <p className="text-[10px] text-[#64748b]">정상 이용 카드</p>
+                        <p className="text-[12px] font-semibold text-[#0f172a]">2장</p>
+                      </div>
+                      <div className={`rounded-lg bg-[#f8fafc] p-2 ${isHighlighted("metric-paused-cards") ? "ring-2 ring-[#fb923c]" : ""}`}>
+                        <p className="text-[10px] text-[#64748b]">일시정지 카드</p>
+                        <p className="text-[12px] font-semibold text-[#0f172a]">1장</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className={`mt-3 rounded-xl p-4 shadow-sm border ${
+                      isHighlighted("card-list-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
+                    }`}
+                  >
+                    <div className={`flex items-baseline justify-between ${isHighlighted("card-list-header") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
+                      <h4 className={`text-[13px] font-semibold text-[#0f172a] ${isHighlighted("card-list-title") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
+                        보유 카드 리스트
+                      </h4>
+                      <span className={`text-[11px] text-[#64748b] ${isHighlighted("card-list-count") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
+                        총 3장
+                      </span>
+                    </div>
+                    <div className={`mt-3 space-y-2 ${isHighlighted("card-items") ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
+                      {[
+                        { id: "card-1", name: "신한 Deep Dream 카드", last4: "1234", limit: "₩3,000,000", billing: "₩1,250,000", status: "정상" },
+                        { id: "card-2", name: "신한 The Best-F 카드", last4: "5678", limit: "₩5,000,000", billing: "₩2,750,000", status: "정상" },
+                        { id: "card-3", name: "신한 체크카드 S-Line", last4: "9012", limit: "₩1,000,000", billing: "₩350,000", status: "일시정지" }
+                      ].map((card) => {
+                        return (
+                          <div
+                            key={card.id}
+                            className={`rounded-lg border p-2 transition-colors ${
+                              isHighlighted(card.id) ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
+                            }`}
+                          >
+                            <div className={`flex items-center justify-between ${isHighlighted(`${card.id}-header`) ? "ring-2 ring-[#fb923c]/60" : ""}`}>
+                              <div className={isHighlighted(`${card.id}-info`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
+                                <p className="text-[12px] font-semibold text-[#0f172a]">{card.name}</p>
+                                <p className="text-[10px] text-[#94a3b8]">{`•••• ${card.last4}`}</p>
+                              </div>
+                              <span className={`text-[10px] font-medium ${card.status === "정상" ? "text-[#10b981]" : "text-[#f59e0b]"} ${isHighlighted(`${card.id}-status`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
+                                {card.status}
+                              </span>
+                            </div>
+                            <div className={`mt-2 grid grid-cols-2 gap-2 text-[10px] text-[#64748b] ${isHighlighted(`${card.id}-metrics`) ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
+                              <div className={isHighlighted(`${card.id}-limit`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
+                                <p>이용 한도</p>
+                                <p className="text-[11px] font-semibold text-[#0f172a]">{card.limit}</p>
+                              </div>
+                              <div className={isHighlighted(`${card.id}-billing`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
+                                <p>결제 예정</p>
+                                <p className="text-[11px] font-semibold text-[#0f172a]">{card.billing}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div
+                    className={`mt-3 rounded-xl p-4 shadow-sm border flex items-center justify-between ${
+                      isHighlighted("card-count-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
+                    }`}
+                  >
+                    <div className={isHighlighted("card-count-info") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
+                      <p className="text-[12px] font-semibold text-[#0f172a]">카드 개수 표시</p>
+                      <p className="text-[11px] text-[#64748b]">보유 카드 합계</p>
+                    </div>
+                    <span className={`text-[14px] font-semibold text-[#4f46e5] ${isHighlighted("card-count-value") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
+                      3장
+                    </span>
+                  </div>
+                    </>
+                  )}
                   </div>
 
                   {/* Home Indicator */}
@@ -315,23 +519,24 @@ export default function WorkspaceActivePage() {
 
                 {/* Flow Steps */}
                 <div className="space-y-6">
-                  {[
-                    { num: 1, title: "헤더 네비게이션", desc: "헤더 컴포넌트 : 텍스트와 아이콘 버튼 정렬 여러개, 최우측엔 메뉴버튼, 필요한 아이콘/픽토그램은 랜덤으로 구성" },
-                    { num: 2, title: "최상단 배너 영역", desc: "최상단 : 통 이미지 배너" },
-                    { num: 3, title: "페이 서비스 리스트 (모듈2)", desc: "모듈2: 리스트+버튼 모듈 / 전체 높이값 AUTO / 모듈 상단: 제목문구 '페이' / 문구옆 화살표 버튼 (버튼클릭시 해당 페이지로 랜딩) / 모듈 중단: 픽토그램+문구 버튼 3개 = 1줄 중앙 정렬 / 버튼내 COULMN 정렬 (1.핸드폰 터치하는 아이콘, 문구 '터치결제' 2.스캔하는 아이콘, 문구 '스캔 코드입력' 3.바코드 아이콘, 문구 '바코드 QR') / 모듈 하단: 우측 - 아이콘 + '모바일 티머니 등록하기' + 화살표" },
-                    { num: 4, title: "슈퍼솔 로고 및 바로가기 (모듈4)", desc: "모듈4: 이미지 + 버튼 1줄 / 레이아웃 한줄로 중앙 정렬 좌측 - 슈퍼솔 로고이미지 우측 - 텍스트 버튼 (은행 | 증권 | 보험)" }
-                  ].map((step, i) => (
-                    <div key={step.num} className="flex gap-4">
+                  {(treeData.length === 0 ? [
+                    { title: "분석 대기", desc: "시나리오 트리 분석을 실행하세요." }
+                  ] : (selectedDetail?.flowSteps ?? [
+                    { title: "분석 대기", desc: "시나리오 트리 분석을 실행하세요." }
+                  ])).map((step, i) => (
+                    <div key={`${step.title}-${i}`} className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className={`w-8 h-8 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center text-[13px] font-semibold 
-                            ${step.modify && 'bg-[#fb923c]'}
+                            ${isModified ? "bg-[#fb923c]" : ""}
                           `}>
-                          {step.num}
+                          {i + 1}
                         </div>
-                        {i < 3 && <div className="w-0.5 flex-1 bg-[#e4eaf2] mt-2" />}
+                        {i < (selectedDetail?.flowSteps?.length ?? 1) - 1 && (
+                          <div className="w-0.5 flex-1 bg-[#e4eaf2] mt-2" />
+                        )}
                       </div>
                       <div className="flex-1 pb-6">
-                        <h3 className={`text-[15px] font-semibold text-[#0f172a] mb-2 ${step.modify && 'text-[#fb923c]'}`}>{step.title}</h3>
+                        <h3 className={`text-[15px] font-semibold text-[#0f172a] mb-2 ${isModified ? "text-[#fb923c]" : ""}`}>{step.title}</h3>
                         <p className="text-[13px] text-[#64748b] leading-relaxed">{step.desc}</p>
                       </div>
                     </div>
@@ -355,20 +560,16 @@ export default function WorkspaceActivePage() {
 
                 {/* Mermaid Diagram */}
                 <div className="flex justify-center">
-                  <MermaidDiagram
-                    chart={`flowchart TB
-    A[헤더 네비게이션] --> B[최상단 배너 영역]
-    B --> C[페이 서비스 리스트<br/>모듈2]
-    C --> D[슈퍼솔 로고 및 바로가기<br/>모듈4]
-    D --> E[고객지원 및 공지사항]
-    
-    style A fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
-    style B fill:#fb923c,stroke:#fb923c,color:#fff
-    style C fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
-    style D fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b
-    style E fill:#c4b5fd,stroke:#8b5cf6,color:#1e1b4b`}
-                    className="w-full flex justify-center"
-                  />
+                  {treeData.length === 0 ? (
+                    <span className="text-[12px] text-[#94a3b8]">시나리오 트리 분석을 실행하세요.</span>
+                  ) : selectedDetail?.diagram ? (
+                    <MermaidDiagram
+                      chart={selectedDetail.diagram}
+                      className="w-full flex justify-center"
+                    />
+                  ) : (
+                    <span className="text-[12px] text-[#94a3b8]">다이어그램이 없습니다.</span>
+                  )}
                 </div>
               </div>
             )}
@@ -383,10 +584,13 @@ export default function WorkspaceActivePage() {
 
                 {/* Code Blocks */}
                 <div className="space-y-4">
-                  {[
-                    { name: "REST_SERVICE.java", status: "Update Required" },
-                    { name: "COMPONENT.vue", status: "Update Required" }
-                  ].map((file) => (
+                  {(treeData.length === 0 ? [{
+                    name: "분석 대기",
+                    content: "// 시나리오 트리 분석을 실행하면 코드가 표시됩니다."
+                  }] : (selectedDetail?.codeFiles?.length ? selectedDetail.codeFiles : [{
+                    name: "분석 대기",
+                    content: "// 시나리오 트리 분석을 실행하면 코드가 표시됩니다."
+                  }])).map((file) => (
                     <div key={file.name} className="bg-[#1e1e2e] rounded-xl overflow-hidden">
                       {/* File Header */}
                       <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d3d]">
@@ -394,15 +598,11 @@ export default function WorkspaceActivePage() {
                           <span className="w-2 h-2 rounded-full bg-[#a3e635]" />
                           <span className="text-[12px] text-white font-medium">{file.name}</span>
                         </div>
-                        <span className="text-[11px] text-[#fbbf24]">{file.status}</span>
+                        <span className="text-[11px] text-[#fbbf24]">{isModified ? "Modified" : "Read"}</span>
                       </div>
                       {/* Code Content */}
-                      <div className="p-4 font-mono text-[12px] leading-relaxed">
-                        <p className="text-[#6b7280]">{"// AI-Generated logic for 최상단 배너 영역"}</p>
-                        <p className="text-[#c084fc]">@PostMapping<span className="text-white">(</span><span className="text-[#a5f3fc]">"/v1/workbench/m-1-0-1772868581952"</span><span className="text-white">)</span></p>
-                        <p className="text-[#60a5fa]">public <span className="text-[#fbbf24]">SyncResponse</span> <span className="text-[#4ade80]">pushUpdate</span><span className="text-white">() {"{"}</span></p>
-                        <p className="text-[#4ade80] pl-4">{"+ // Mapping from current scenario..."}</p>
-                        <p className="text-white">{"}"}</p>
+                      <div className="p-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-white/90">
+                        {file.content}
                       </div>
                     </div>
                   ))}
