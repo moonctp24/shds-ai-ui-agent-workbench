@@ -21,7 +21,7 @@ export default function WorkspaceActivePage() {
   const [originalScenario, setOriginalScenario] = useState("")
   const [modifiedScenario, setModifiedScenario] = useState("")
   const [modifiedNodes, setModifiedNodes] = useState<string[]>([])
-  const [checkedItems, setCheckedItems] = useState<string[]>([])
+  const [checkedRequirements, setCheckedRequirements] = useState<Record<string, string[]>>({})
 
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
 
@@ -45,7 +45,50 @@ export default function WorkspaceActivePage() {
     }
     return findLabel(treeData)
   }, [selectedItem, treeData])
-  const isHighlighted = (id: string) => checkedItems.includes(id)
+  const highlightIds = useMemo(() => {
+    if (!selectedItem || treeData.length === 0) return []
+    const collect = (node: TreeItem): string[] => {
+      const ids = [node.id]
+      if (node.children?.length) {
+        node.children.forEach(child => {
+          ids.push(...collect(child))
+        })
+      }
+      return ids
+    }
+    const findNode = (nodes: TreeItem[]): TreeItem | undefined => {
+      for (const node of nodes) {
+        if (node.id === selectedItem) return node
+        if (node.children?.length) {
+          const found = findNode(node.children)
+          if (found) return found
+        }
+      }
+      return undefined
+    }
+    const target = findNode(treeData)
+    return target ? collect(target) : [selectedItem]
+  }, [selectedItem, treeData])
+
+  const isHighlighted = (id: string) => highlightIds.includes(id)
+
+  const requirementItems = useMemo(() => {
+    const source = modifiedScenario?.trim()
+    if (!source) return []
+    if (source.includes("\n")) {
+      return source
+        .split("\n")
+        .map(line => line.trim())
+        .filter(Boolean)
+    }
+    const dotSplit = source.split(/(?<=\.)\s+/).map(text => text.trim()).filter(Boolean)
+    if (dotSplit.length > 1) return dotSplit
+    return source
+      .split(/다\.\s*/)
+      .map(text => text.trim())
+      .filter(Boolean)
+      .map(text => `${text}다.`)
+  }, [modifiedScenario])
 
   useEffect(() => {
     if (!selectedItem) return
@@ -79,7 +122,6 @@ export default function WorkspaceActivePage() {
     setSelectedItem("root")
     setExpandedItems(collectExpandedIds(learnedProject.tree))
     setModifiedNodes([])
-    setCheckedItems([])
   }
 
   const toggleExpand = (id: string) => {
@@ -95,7 +137,6 @@ export default function WorkspaceActivePage() {
     const isNodeModified = modifiedNodes.includes(item.id)
     const nodeStatus = nodeDetails[item.id]?.status ?? "pending"
     const paddingLeft = depth * 20 + 8
-    const isChecked = checkedItems.includes(item.id)
 
     return (
       <div key={item.id}>
@@ -126,18 +167,6 @@ export default function WorkspaceActivePage() {
             ) : (
               <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${isSelected ? "bg-white" : "bg-[#8b5cf6]"} hover:text-white`} />
             )}
-            <input
-              type="checkbox"
-              className="h-3.5 w-3.5 accent-[#8b5cf6]"
-              checked={isChecked}
-              onChange={(event) => {
-                event.stopPropagation()
-                const nextChecked = event.target.checked
-                setCheckedItems(prev =>
-                  nextChecked ? [...prev, item.id] : prev.filter(id => id !== item.id)
-                )
-              }}
-            />
             <span
               className={`w-2 h-2 rounded-full ${
                 nodeStatus === "complete" ? "bg-[#10b981]" : "bg-[#cbd5f5]"
@@ -252,24 +281,37 @@ export default function WorkspaceActivePage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
                 <span className="text-[12px] text-[#8b5cf6]">변경 후 시나리오 (렌더링 대상)</span>
               </div>
-              <div className="flex-1 border border-[#e4eaf2] rounded-xl p-4 bg-white">
-                <textarea
-                  className="text-[12px] text-[#0f172a] leading-relaxed w-full h-full resize-none"
-                  value={modifiedScenario}
-                  placeholder="예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개..."
-                  onChange={(event) => {
-                    const value = event.target.value
-                    setModifiedScenario(value)
-                    if (!selectedItem) return
-                    if (value && value !== originalScenario) {
-                      setModifiedNodes(prev =>
-                        prev.includes(selectedItem) ? prev : [...prev, selectedItem]
+              <div className="flex-1 border border-[#e4eaf2] rounded-xl p-4 bg-white overflow-y-auto">
+                {requirementItems.length === 0 ? (
+                  <p className="text-[12px] text-[#94a3b8]">요구사항이 없습니다.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(selectedItem ? requirementItems : requirementItems).map((item, index) => {
+                      const requirementKey = selectedItem ?? "root"
+                      const checkedList = checkedRequirements[requirementKey] ?? []
+                      const isChecked = checkedList.includes(item)
+                      return (
+                        <label key={`${item}-${index}`} className="flex items-start gap-2 text-[12px] text-[#0f172a]">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-3.5 w-3.5 accent-[#8b5cf6]"
+                            checked={isChecked}
+                            onChange={(event) => {
+                              const nextChecked = event.target.checked
+                              setCheckedRequirements(prev => {
+                                const nextList = nextChecked
+                                  ? [...checkedList, item]
+                                  : checkedList.filter(value => value !== item)
+                                return { ...prev, [requirementKey]: nextList }
+                              })
+                            }}
+                          />
+                          <span>{item}</span>
+                        </label>
                       )
-                    } else {
-                      setModifiedNodes(prev => prev.filter(id => id !== selectedItem))
-                    }
-                  }}
-                />
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
