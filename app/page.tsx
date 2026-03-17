@@ -206,24 +206,6 @@ export default function WorkspaceActivePage() {
               <span className="text-[14px] font-medium">시나리오 트리 분석</span>
             </button>
 
-            {/* Spec Viewer */}
-            <div className="border border-[#e4eaf2] rounded-xl p-4 bg-white mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-semibold text-[#475569] tracking-widest">SPEC VIEWER</span>
-                {selectedDetail?.status && (
-                  <span className="px-2 py-0.5 bg-[#f1f5f9] text-[#64748b] text-[10px] font-medium rounded">
-                    {selectedDetail.status === "complete" ? "Ready" : "Pending"}
-                  </span>
-                )}
-              </div>
-              <h3 className="text-[13px] font-semibold text-[#0f172a] mb-2">
-                {selectedDetail?.title ?? "분석 대기"}
-              </h3>
-              <p className="text-[12px] text-[#64748b] leading-relaxed">
-                {selectedDetail?.doc ?? "시나리오 트리 분석을 실행하면 선택한 컴포넌트의 기획서가 표시됩니다."}
-              </p>
-            </div>
-
             {/* Render Mode Toggle */}
             <div className="flex gap-2 mb-6">
               <button
