@@ -8,3 +8,16 @@ node_modules/
 .next/
 .env*.local
 .DS_Store
+
+# Python Backend 가상환경 및 캐시 제외
+backend/venv/
+backend/.venv/
+backend/__pycache__/
+backend/*.db
+backend/.env
+
+# Python bytecode (컴파일 파일 제외)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

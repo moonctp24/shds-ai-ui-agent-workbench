@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react"
 import { Check, Maximize2, Layers, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Trash2, GitBranch, Code2 } from "lucide-react"
 import dynamic from "next/dynamic"
 import { learnedProject, NodeDetail, TreeNode } from "@/lib/learned-project"
+import axios from "axios"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 const MermaidDiagram = dynamic(() => import("@/components/mermaid-diagram"), { ssr: false })
 
@@ -22,6 +25,10 @@ export default function WorkspaceActivePage() {
   const [modifiedScenario, setModifiedScenario] = useState("")
   const [modifiedNodes, setModifiedNodes] = useState<string[]>([])
   const [checkedRequirements, setCheckedRequirements] = useState<Record<string, string[]>>({})
+  const [gitUrl, setGitUrl] = useState("")
+  const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [analysisMarkdown, setAnalysisMarkdown] = useState<string>("")
 
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
 
@@ -124,6 +131,33 @@ export default function WorkspaceActivePage() {
     setModifiedNodes([])
   }
 
+  const handleAnalyzeGit = async () => {
+    const url = gitUrl.trim()
+    if (!url) {
+      setAnalysisError("Git URL을 입력해주세요.")
+      return
+    }
+
+    setAnalysisLoading(true)
+    setAnalysisError(null)
+    try {
+      const res = await axios.post("http://localhost:8000/api/analyze", { git_url: url })
+      const md = typeof res.data?.markdown === "string" ? res.data.markdown : ""
+      setAnalysisMarkdown(md || "분석 결과가 비어있습니다.")
+      setActiveTab("CODE")
+    } catch (e: any) {
+      const message =
+        e?.response?.data?.detail ||
+        e?.message ||
+        "분석에 실패했습니다. 백엔드(8000) 실행 및 CORS 설정을 확인해주세요."
+      setAnalysisError(String(message))
+      setAnalysisMarkdown("")
+      setActiveTab("CODE")
+    } finally {
+      setAnalysisLoading(false)
+    }
+  }
+
   const toggleExpand = (id: string) => {
     setExpandedItems(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
@@ -211,6 +245,28 @@ export default function WorkspaceActivePage() {
           </div>
 
           <div className="flex-1 flex flex-col p-5 overflow-hidden">
+            {/* Git Analysis */}
+            <div className="mb-3">
+              <div className="flex gap-2">
+                <input
+                  value={gitUrl}
+                  onChange={(e) => setGitUrl(e.target.value)}
+                  placeholder="Git URL 입력 (https://...)"
+                  className="flex-1 h-11 px-3 rounded-lg border border-[#e4eaf2] text-[13px] text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]/40"
+                />
+                <button
+                  className="h-11 px-4 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={handleAnalyzeGit}
+                  disabled={analysisLoading}
+                >
+                  <span className="text-[14px] font-medium">{analysisLoading ? "분석 중..." : "분석"}</span>
+                </button>
+              </div>
+              {analysisError && (
+                <p className="mt-2 text-[12px] text-[#ef4444]">{analysisError}</p>
+              )}
+            </div>
+
             {/* Scenario Tree Analysis Button */}
             <button
               className="w-full h-11 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg flex items-center justify-center gap-2 mb-4 transition-colors"
@@ -606,31 +662,38 @@ export default function WorkspaceActivePage() {
                   <span className="text-[16px] font-semibold text-[#0f172a]">Spec Overview</span>
                 </div>
 
-                {/* Code Blocks */}
-                <div className="space-y-4">
-                  {(treeData.length === 0 ? [{
-                    name: "분석 대기",
-                    content: "// 시나리오 트리 분석을 실행하면 코드가 표시됩니다."
-                  }] : (selectedDetail?.codeFiles?.length ? selectedDetail.codeFiles : [{
-                    name: "분석 대기",
-                    content: "// 시나리오 트리 분석을 실행하면 코드가 표시됩니다."
-                  }])).map((file) => (
-                    <div key={file.name} className="bg-[#1e1e2e] rounded-xl overflow-hidden">
-                      {/* File Header */}
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d3d]">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-[#a3e635]" />
-                          <span className="text-[12px] text-white font-medium">{file.name}</span>
+                {analysisMarkdown ? (
+                  <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {analysisMarkdown}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {(treeData.length === 0 ? [{
+                      name: "분석 대기",
+                      content: "// 시나리오 트리 분석을 실행하면 코드가 표시됩니다."
+                    }] : (selectedDetail?.codeFiles?.length ? selectedDetail.codeFiles : [{
+                      name: "분석 대기",
+                      content: "// 시나리오 트리 분석을 실행하면 코드가 표시됩니다."
+                    }])).map((file) => (
+                      <div key={file.name} className="bg-[#1e1e2e] rounded-xl overflow-hidden">
+                        {/* File Header */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d3d]">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#a3e635]" />
+                            <span className="text-[12px] text-white font-medium">{file.name}</span>
+                          </div>
+                          <span className="text-[11px] text-[#fbbf24]">{isModified ? "Modified" : "Read"}</span>
                         </div>
-                        <span className="text-[11px] text-[#fbbf24]">{isModified ? "Modified" : "Read"}</span>
+                        {/* Code Content */}
+                        <div className="p-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-white/90">
+                          {file.content}
+                        </div>
                       </div>
-                      {/* Code Content */}
-                      <div className="p-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-white/90">
-                        {file.content}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
