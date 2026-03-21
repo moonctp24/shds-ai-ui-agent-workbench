@@ -16,16 +16,19 @@ interface TreeItem {
 }
 
 export default function Sub1Page() {
+  // 260319 옵션 추가
   const [activeTab, setActiveTab] = useState("PREVIEW")
   const [activeRenderMode, setActiveRenderMode] = useState<"batch" | "individual">("batch")
   const [expandedItems, setExpandedItems] = useState<string[]>(["root", "header", "body", "shortcuts", "footer"])
   const [selectedItem, setSelectedItem] = useState<string | null>("header-depth2")
   const [microRequirements, setMicroRequirements] = useState<string[]>([
-    "터치 결제, 스캔/코드 입력, 바코드/QR 결제 등 오픈라인 결제 수단을 직관적이 아이콘으로 제공합니다.",
-    "하단에 '모바일 티머니 등록하기' 버튼"
+    "터치 결제, 스캔/코드 입력, 바코드/QR 결제 등 오프라인 결제 수단 아이콘\n아이콘 이미지 주소를 https://www.......\nalt는 00아이콘으로",
+    "하단에 '모바일 티머니 등록하기' 버튼",
+    "하단에 '모바일 티머니 등록하기' 버튼",
+    "*터치 결제, 스캔/코드 입력, 바코드/QR 결제 등 오프라인 결제 수단을 직관적인 아이콘으로 제공합니다. 하단에 '모바일 티머니 등록하기' 버튼을 통해 교통카드 기능을 강조 합니다."
   ])
-  const [checkedRequirements, setCheckedRequirements] = useState<Set<number>>(new Set())
-
+  const [checkedRequirements, setCheckedRequirements] = useState<Set<number>>(new Set([0, 1]))
+  const [gitlabUrl, setGitlabUrl] = useState("깃랩url")
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
 
   const treeData: TreeItem[] = [
@@ -146,7 +149,6 @@ export default function Sub1Page() {
                 <path d="M11.5857 20.5555L20.0611 24.7719C20.349 24.9151 20.6881 24.9112 20.9726 24.7614L28.9571 20.5555" stroke="white" stroke-width="2" stroke-linecap="round"/>
                 <path d="M11.5857 25L20.0611 29.2164C20.349 29.3596 20.6881 29.3557 20.9726 29.2058L28.9571 25" stroke="white" stroke-width="2" stroke-linecap="round"/>
               </svg>
-              {/* <Layers className="w-4 h-4 text-white stroke-[1.5]" /> */}
             </div>
             <span className="text-[15px] font-semibold text-[#0f172a]">Workspace</span>
           </div>
@@ -160,12 +162,6 @@ export default function Sub1Page() {
                 <rect x="11.4167" y="11.395" width="3.83333" height="3.85498" stroke="#77879D" stroke-width="1.5"/>
                 <path d="M13.3333 10.645V8.41373H8.2222M3.11108 10.645V8.41373H8.2222M8.2222 8.41373V4.84375" stroke="#77879D"/>
               </svg>
-              {/* <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="9" cy="3" r="2" stroke="currentColor" strokeWidth="1.5"/>
-                <circle cx="4" cy="11" r="2" stroke="currentColor" strokeWidth="1.5"/>
-                <circle cx="14" cy="11" r="2" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M9 5V7M9 7L4 9M9 7L14 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg> */}
               <span className="text-[14px] font-medium">시나리오 트리 분석</span>
             </button>
 
@@ -195,7 +191,6 @@ export default function Sub1Page() {
                   <rect x="0.75" y="9.89282" width="7.64286" height="5.35714" stroke="#77879D" stroke-width="1.5"/>
                   <rect x="11.75" y="9.75" width="3.07143" height="5.35714" stroke="#77879D" stroke-width="1.5"/>
                 </svg>
-                {/* <LayoutGrid className="w-4 h-4 stroke-[1.5]" /> */}
                 개별 UI렌더링
               </button>
             </div>
@@ -205,19 +200,22 @@ export default function Sub1Page() {
               <span className="px-2 py-0.5 bg-[#f1f5f9] text-[#64748b] text-[10px] font-medium rounded">Auto Saved</span>
             </div>
 
+            {/* Scenario Editor Content - Scrollable */}
             <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+              {/* 원문 Section */}
               <div>
                 <h3 className="text-[12px] font-medium text-[#475569] mb-2 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
                   원문
                 </h3>
-                <div className="bg-[#e4eaf2] rounded-xl p-4 min-h-[140px]">
+                <div className="bg-[#e4eaf2] rounded-xl p-4 min-h-[100px]">
                   <p className="text-[12px] text-[#94a3b8] leading-relaxed">
-                    터치 결제, 스캔/코드 입력, 바코드/QR 결제 등 오픈라인 결제 수단을 직관적이 아이콘으로 제공합니다.
+                    *터치 결제, 스캔/코드 입력, 바코드/QR 결제 등 오프라인 결제 수단을 직관적인 아이콘으로 제공합니다. 하단에 '모바일 티머니 등록하기' 버튼을 통해 교통카드 기능을 강조 합니다.
                   </p>
                 </div>
               </div>
 
+              {/* 마이크로 요구사항 Section */}
               <div>
                 <h3 className="text-[12px] font-medium text-[#8b5cf6] mb-2 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
@@ -227,11 +225,14 @@ export default function Sub1Page() {
                   {microRequirements.map((req, idx) => {
                     const isChecked = checkedRequirements.has(idx)
                     return (
-                      <div key={idx} className="flex items-start gap-2 bg-white border border-[#e4eaf2] rounded-lg px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {
+                      <div 
+                        key={idx} 
+                        className={`flex items-start gap-2 border rounded-lg px-3 py-2 ${
+                          isChecked ? "bg-[#f8fafc] border-[#8b5cf6]" : "bg-white border-[#e4eaf2]"
+                        }`}
+                      >
+                        <div 
+                          onClick={() => {
                             const newSet = new Set(checkedRequirements)
                             if (isChecked) {
                               newSet.delete(idx)
@@ -240,8 +241,12 @@ export default function Sub1Page() {
                             }
                             setCheckedRequirements(newSet)
                           }}
-                          className="w-4 h-4 rounded border-[#d9d9d9] cursor-pointer mt-1 flex-shrink-0"
-                        />
+                          className={`w-5 h-5 rounded flex items-center justify-center cursor-pointer mt-0.5 flex-shrink-0 ${
+                            isChecked ? "bg-[#8b5cf6]" : "border border-[#d9d9d9]"
+                          }`}
+                        >
+                          {isChecked && <Check className="w-3 h-3 text-white stroke-[2]" />}
+                        </div>
                         {isChecked ? (
                           <textarea
                             value={req}
@@ -250,10 +255,10 @@ export default function Sub1Page() {
                               newReqs[idx] = e.target.value
                               setMicroRequirements(newReqs)
                             }}
-                            className="flex-1 text-[12px] text-[#0f172a] bg-[#f8fafc] border border-[#d9d9d9] rounded px-2 py-1 resize-none focus:outline-none focus:border-[#8b5cf6] min-h-[60px]"
+                            className="flex-1 text-[12px] text-[#0f172a] bg-transparent border-none resize-none focus:outline-none min-h-[60px] leading-relaxed"
                           />
                         ) : (
-                          <span className="flex-1 text-[12px] text-[#0f172a] leading-relaxed">{req}</span>
+                          <span className="flex-1 text-[12px] text-[#0f172a] leading-relaxed whitespace-pre-line">{req}</span>
                         )}
                         <button 
                           onClick={() => {
@@ -263,7 +268,7 @@ export default function Sub1Page() {
                             newSet.delete(idx)
                             setCheckedRequirements(newSet)
                           }}
-                          className="text-[#94a3b8] hover:text-[#0f172a] transition-colors flex-shrink-0 mt-1"
+                          className="text-[#94a3b8] hover:text-[#0f172a] transition-colors flex-shrink-0 mt-0.5"
                         >
                           <X className="w-4 h-4 stroke-[1.5]" />
                         </button>
@@ -282,6 +287,23 @@ export default function Sub1Page() {
                     <span className="text-[12px] font-medium">새로운 내용 추가</span>
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* NEW SCENARIO Section */}
+            <div className="mt-auto pt-4">
+              <span className="text-[11px] font-semibold text-[#475569] tracking-widest mb-3 block">NEW SCENARIO</span>
+              <div className="border border-[#e4eaf2] rounded-xl p-4 bg-white mb-3 min-h-[80px]">
+                <textarea className="text-[12px] text-[#94a3b8] leading-relaxed w-full resize-none" placeholder="새 시나리오" />
+              </div>
+              <div className="flex items-center gap-2 border border-[#e4eaf2] rounded-lg px-3 py-2 bg-white">
+                <input className="flex-1 text-[12px] text-[#0f172a]" value={gitlabUrl} />
+                <button 
+                  onClick={() => setGitlabUrl("")}
+                  className="text-[#94a3b8] hover:text-[#0f172a] transition-colors"
+                >
+                  <X className="w-4 h-4 stroke-[1.5]" />
+                </button>
               </div>
             </div>
           </div>
@@ -367,7 +389,6 @@ export default function Sub1Page() {
                 <path d="M19.3858 21.6747C19.6796 21.3827 19.6811 20.9079 19.3891 20.6141C19.0971 20.3203 18.6222 20.3189 18.3284 20.6109L18.8571 21.1428L19.3858 21.6747ZM12.6509 26.5637C12.6497 26.9779 12.9844 27.3148 13.3987 27.316L20.1486 27.3365C20.5628 27.3377 20.8996 27.003 20.9009 26.5887C20.9022 26.1745 20.5674 25.8377 20.1532 25.8365L14.1532 25.8183L14.1714 19.8183C14.1726 19.4041 13.8379 19.0673 13.4237 19.066C13.0095 19.0648 12.6727 19.3996 12.6714 19.8138L12.6509 26.5637ZM18.8571 21.1428L18.3284 20.6109L12.8722 26.0341L13.4009 26.566L13.9296 27.0979L19.3858 21.6747L18.8571 21.1428Z" fill="#8559EC"/>
                 <path d="M20.8716 18.0341C20.578 18.3263 20.5769 18.8012 20.869 19.0948C21.1612 19.3884 21.6361 19.3896 21.9297 19.0974L21.4007 18.5658L20.8716 18.0341ZM27.5999 13.1447C27.601 12.7305 27.266 12.3939 26.8518 12.3929L20.1018 12.3765C19.6876 12.3755 19.351 12.7105 19.35 13.1247C19.349 13.5389 19.6839 13.8755 20.0981 13.8765L26.0981 13.8911L26.0835 19.8911C26.0825 20.3053 26.4175 20.6419 26.8317 20.6429C27.2459 20.6439 27.5825 20.3089 27.5835 19.8947L27.5999 13.1447ZM21.4007 18.5658L21.9297 19.0974L27.379 13.6745L26.8499 13.1429L26.3209 12.6113L20.8716 18.0341L21.4007 18.5658Z" fill="#8559EC"/>
               </svg>
-              {/* <Maximize2 className="w-3.5 h-3.5 text-[#64748b] stroke-[1.5]" /> */}
             </button>
           </div>
 
@@ -409,7 +430,6 @@ export default function Sub1Page() {
                     <path d="M9 1.5V16.5M3 5.875V10.875M15 5.875V9.625C15 10.0417 14.55 11 12.75 11.5" stroke="#8B5CF6" stroke-width="1.5" stroke-linecap="round"/>
                     <circle cx="3" cy="13.5" r="2.5" stroke="#8B5CF6" stroke-linejoin="round"/>
                   </svg>
-                  {/* <GitBranch className="w-5 h-5 text-[#8b5cf6] stroke-[1.5]" /> */}
                   <span className="text-[16px] font-semibold text-[#0f172a]">Business Flow</span>
                 </div>
 
@@ -482,7 +502,6 @@ export default function Sub1Page() {
                     <path d="M15.079 0.244008C15.4545 -0.102476 16.0382 -0.0768776 16.3823 0.301135L22 6.47086L16.8723 12.666C16.5462 13.0598 15.9639 13.113 15.5726 12.7848C15.1814 12.4564 15.1286 11.8702 15.4546 11.4763L19.5492 6.52798L15.0223 1.55612C14.6781 1.17809 14.7036 0.59052 15.079 0.244008ZM5.64377 0.301135C5.98796 -0.0768777 6.57159 -0.102477 6.94708 0.244008C7.32256 0.59052 7.34799 1.17809 7.00383 1.55612L2.50214 6.49987L7.00383 11.4436C7.34799 11.8217 7.32256 12.4092 6.94708 12.7557C6.57159 13.1022 5.98796 13.0766 5.64377 12.6986L0 6.49987L5.64377 0.301135Z" fill="#8B5CF6"/>
                     <path d="M12.2949 0.744101C12.4364 0.354983 12.8667 0.153661 13.2558 0.294882C13.6449 0.43638 13.8463 0.866669 13.705 1.25582L9.70504 12.2558C9.56354 12.6449 9.13325 12.8463 8.7441 12.705C8.35498 12.5635 8.15366 12.1333 8.29488 11.7441L12.2949 0.744101Z" fill="#8B5CF6"/>
                   </svg>
-                  {/* <Code2 className="w-5 h-5 text-[#8b5cf6]" /> */}
                   <span className="text-[16px] font-semibold text-[#0f172a]">Spec Overview</span>
                 </div>
 

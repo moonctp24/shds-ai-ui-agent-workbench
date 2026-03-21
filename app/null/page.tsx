@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Maximize2, Layers, Sparkles, LayoutGrid } from "lucide-react"
+import { Check, Maximize2, Layers, Sparkles, LayoutGrid, X } from "lucide-react" // 260319 옵션 추가
 
 export default function NullPage() {
+  // 260319 옵션 추가
   const [activeTab, setActiveTab] = useState("PREVIEW")
   const [activeRenderMode, setActiveRenderMode] = useState<"batch" | "individual">("batch")
+  const [gitlabUrl, setGitlabUrl] = useState("https://www.gitlab.~~~~~")
 
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
 
@@ -62,14 +64,25 @@ export default function NullPage() {
               <span className="px-2 py-0.5 bg-[#f1f5f9] text-[#64748b] text-[10px] font-medium rounded">Auto Saved</span>
             </div>
 
-            <div className="flex-1 border border-dashed border-[#c8d2e1] rounded-xl flex items-center justify-center mb-4">
+            {/* Empty Scenario Area - Dashed Border */}
+            <div className="flex-1 border-2 border-dashed border-[#c8d2e1] rounded-xl flex items-center justify-center mb-4">
               <p className="text-[13px] text-[#94a3b8] text-center px-8">시나리오를 입력하여 프로젝트를 시작하세요</p>
             </div>
 
-            <div className="border border-[#e4eaf2] rounded-xl p-4 bg-white min-h-[100px]">
-              <p className="text-[12px] text-[#94a3b8] leading-relaxed">
-                예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개...
-              </p>
+            {/* NEW SCENARIO Section */}
+            <div className="border border-[#e4eaf2] rounded-xl p-4 bg-white mb-3">
+              <textarea className="text-[12px] text-[#94a3b8] leading-relaxed w-full resize-none" placeholder="예) 기업용 대시보드 메인화면을 만들어줘. 좌측엔 메뉴바, 우측엔 통계 그래프 3개..." />
+            </div>
+
+            {/* GitLab URL Input */}
+            <div className="flex items-center gap-2 border border-[#e4eaf2] rounded-lg px-3 py-2 bg-white">
+              <input className="flex-1 text-[12px] text-[#0f172a]" value={gitlabUrl} />
+              <button 
+                onClick={() => setGitlabUrl("")}
+                className="text-[#94a3b8] hover:text-[#0f172a] transition-colors"
+              >
+                <X className="w-4 h-4 stroke-[1.5]" />
+              </button>
             </div>
           </div>
         </aside>
