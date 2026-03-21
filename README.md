@@ -16,7 +16,7 @@
 - [x] 초안 UI기획 문서 작성
 - [x] 디자인: 라이트 테마 완료 [https://figmashort.link/8zJJdn](https://figmashort.link/8zJJdn)
 - [x] 퍼블리싱 v0 초안 코드 작성
-- [ ] ~~퍼블리싱:  디테일 정리 (~3/16)~~
+~~- [ ] 퍼블리싱:  디테일 정리 (~3/16)~~
 - [x] 퍼블리싱: 마이크로 요구사항 누락건 추가
 - [x] 퍼블리싱: 디테일 style조정, url input추가
 
