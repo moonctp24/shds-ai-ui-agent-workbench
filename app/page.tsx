@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Check, Maximize2, Layers, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Trash2, GitBranch, Code2 } from "lucide-react"
 import dynamic from "next/dynamic"
 import { learnedProject, NodeDetail, TreeNode } from "@/lib/learned-project"
-import axios from "axios"
+import { api } from "@/lib/api"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -141,15 +141,24 @@ export default function WorkspaceActivePage() {
     setAnalysisLoading(true)
     setAnalysisError(null)
     try {
-      const res = await axios.post("http://localhost:8000/api/analyze", { git_url: url })
+      const res = await api.post("/api/analyze", { git_url: url })
       const md = typeof res.data?.markdown === "string" ? res.data.markdown : ""
       setAnalysisMarkdown(md || "분석 결과가 비어있습니다.")
       setActiveTab("CODE")
     } catch (e: any) {
+      const isNetworkError = Boolean(e?.request) && !e?.response
+      if (isNetworkError) {
+        console.error("API network error:", {
+          message: e?.message,
+          code: e?.code,
+          config: e?.config,
+        })
+        alert("서버 연결 확인")
+      }
       const message =
         e?.response?.data?.detail ||
         e?.message ||
-        "분석에 실패했습니다. 백엔드(8000) 실행 및 CORS 설정을 확인해주세요."
+        "분석에 실패했습니다. 백엔드 실행 및 CORS 설정을 확인해주세요."
       setAnalysisError(String(message))
       setAnalysisMarkdown("")
       setActiveTab("CODE")
