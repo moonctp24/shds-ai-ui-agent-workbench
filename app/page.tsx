@@ -10,7 +10,10 @@ import remarkGfm from "remark-gfm"
 
 const MermaidDiagram = dynamic(() => import("@/components/mermaid-diagram"), { ssr: false })
 
-type TreeItem = TreeNode
+type TreeItem = TreeNode & {
+  path?: string
+  is_dir?: boolean
+}
 
 export default function WorkspaceActivePage() {
   const [activeTab, setActiveTab] = useState("PREVIEW")
@@ -119,6 +122,28 @@ export default function WorkspaceActivePage() {
     return ids
   }
 
+  const buildDetailsFromTree = (items: TreeItem[], docs?: Record<string, string>) => {
+    const details: Record<string, NodeDetail> = {}
+    const walk = (nodes: TreeItem[]) => {
+      nodes.forEach(node => {
+        const isFolder = node.label.endsWith("/")
+        const doc = docs?.[node.id]
+        details[node.id] = {
+          title: node.label,
+          doc: doc ?? (isFolder ? "폴더 항목입니다. 하위 파일/폴더를 포함합니다." : "파일 항목입니다."),
+          previewSummary: [node.label],
+          flowSteps: [{ title: node.label, desc: "프로젝트 트리 항목" }],
+          diagram: `flowchart TB\n  A["${node.label.replace(/"/g, "'")}"]`,
+          codeFiles: [],
+          status: "complete",
+        }
+        if (node.children?.length) walk(node.children)
+      })
+    }
+    walk(items)
+    return details
+  }
+
   const handleAnalyzeScenario = () => {
     setTreeData(learnedProject.tree)
     setNodeDetails(learnedProject.details)
@@ -143,7 +168,17 @@ export default function WorkspaceActivePage() {
     try {
       const res = await axios.post("http://localhost:8000/api/analyze", { git_url: url })
       const md = typeof res.data?.markdown === "string" ? res.data.markdown : ""
+      const tree = Array.isArray(res.data?.tree) ? (res.data.tree as TreeItem[]) : []
+      const nodeDocs = res.data?.node_docs as Record<string, string> | undefined
       setAnalysisMarkdown(md || "분석 결과가 비어있습니다.")
+      if (tree.length > 0) {
+        setTreeData(tree)
+        setNodeDetails(buildDetailsFromTree(tree, nodeDocs))
+        setProjectName(url.split("/").pop()?.replace(".git", "") ?? "Git Project")
+        setProjectVersion("git")
+        setSelectedItem(tree[0].id)
+        setExpandedItems(collectExpandedIds(tree))
+      }
       setActiveTab("CODE")
     } catch (e: any) {
       const message =

@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import os
+import re
 import shutil
 import tempfile
 
@@ -29,8 +32,19 @@ class AnalyzeRequest(BaseModel):
     git_url: str = Field(..., min_length=1, description="Git repository clone URL (HTTPS)")
 
 
+class TreeNode(BaseModel):
+    id: str
+    label: str
+    level: int
+    children: list["TreeNode"] | None = None
+    path: str | None = None
+    is_dir: bool | None = None
+
+
 class AnalyzeResponse(BaseModel):
     markdown: str
+    tree: list[TreeNode] | None = None
+    node_docs: dict[str, str] | None = None
 
 
 def _is_ignored_dir(name: str) -> bool:
@@ -76,6 +90,107 @@ def _tree_markdown(root_dir: str, max_entries: int = 4000) -> str:
     return "\n".join(lines)
 
 
+def _tree_json(root_dir: str, max_depth: int = 4, max_entries: int = 600) -> list[TreeNode]:
+    count = 0
+    root_dir = os.path.abspath(root_dir)
+
+    def walk(dir_path: str, level: int) -> list[TreeNode]:
+        nonlocal count
+        if count >= max_entries or level > max_depth:
+            return []
+
+        try:
+            entries = sorted(os.listdir(dir_path), key=lambda s: (not os.path.isdir(os.path.join(dir_path, s)), s.lower()))
+        except OSError:
+            return []
+
+        nodes: list[TreeNode] = []
+        for name in entries:
+            if count >= max_entries:
+                break
+            if _is_ignored_dir(name):
+                continue
+            full = os.path.join(dir_path, name)
+            is_dir = os.path.isdir(full)
+            rel_path = os.path.relpath(full, root_dir).replace("\\", "/")
+            node_id = rel_path
+            node = TreeNode(
+                id=node_id,
+                label=name + ("/" if is_dir else ""),
+                level=level,
+                path=rel_path,
+                is_dir=is_dir,
+            )
+            count += 1
+            if is_dir:
+                node.children = walk(full, level + 1) or None
+            nodes.append(node)
+        return nodes
+
+    return walk(root_dir, 0)
+
+
+def _read_text(path: str, max_chars: int = 8000) -> str:
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
+            return handle.read(max_chars)
+    except OSError:
+        return ""
+
+
+def _describe_file(path: str, text: str) -> str:
+    name = os.path.basename(path)
+    ext = os.path.splitext(name)[1].lower()
+    lower = text.lower()
+
+    if ext in {".md"}:
+        return "문서 파일입니다. 프로젝트 설명이나 기획 내용을 담습니다."
+    if ext in {".json", ".yml", ".yaml", ".toml"}:
+        return "설정/데이터 파일입니다. 빌드나 런타임 설정을 정의합니다."
+    if ext in {".css", ".scss", ".sass"}:
+        return "스타일 파일입니다. 화면 색상/레이아웃/타이포그래피를 정의합니다."
+    if ext in {".py"}:
+        if "fastapi" in lower:
+            return "백엔드 API 서버 파일입니다. FastAPI 라우트와 미들웨어가 정의됩니다."
+        if "pydantic" in lower:
+            return "데이터 스키마/검증 로직을 정의하는 파이썬 모듈입니다."
+        return "파이썬 모듈 파일입니다."
+    if ext in {".ts", ".tsx", ".js", ".jsx"}:
+        if "next" in lower and "page" in name.lower():
+            return "페이지 컴포넌트입니다. 라우트의 화면을 렌더링합니다."
+        if "layout" in name.lower():
+            return "레이아웃 컴포넌트입니다. 공통 레이아웃/메타데이터를 설정합니다."
+        if "api" in lower or "route" in name.lower():
+            return "API 라우트/핸들러 파일입니다."
+        if "export default" in lower and "return (" in lower:
+            return "UI 컴포넌트 파일입니다. 화면을 렌더링하는 React 컴포넌트가 포함됩니다."
+        if "use state" in lower or "usestate" in lower:
+            return "클라이언트 상태를 사용하는 UI 컴포넌트 파일입니다."
+        return "프론트엔드 로직/컴포넌트 파일입니다."
+
+    return "프로젝트 리소스 파일입니다."
+
+
+def _build_node_docs(root_dir: str, tree: list[TreeNode]) -> dict[str, str]:
+    root_dir = os.path.abspath(root_dir)
+    docs: dict[str, str] = {}
+
+    def walk(nodes: list[TreeNode]) -> None:
+        for node in nodes:
+            if node.path:
+                full = os.path.join(root_dir, node.path.replace("/", os.sep))
+                if node.is_dir:
+                    docs[node.id] = "폴더 항목입니다. 하위 파일/폴더를 포함합니다."
+                else:
+                    text = _read_text(full)
+                    docs[node.id] = _describe_file(full, text)
+            if node.children:
+                walk(node.children)
+
+    walk(tree)
+    return docs
+
+
 @app.get("/health")
 def health() -> dict:
     return {"ok": True}
@@ -100,6 +215,8 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
         tree = _tree_markdown(repo_dir)
         title = os.path.basename(git_url).removesuffix(".git") if hasattr(str, "removesuffix") else os.path.basename(git_url).replace(".git", "")
 
+        tree_json = _tree_json(repo_dir)
+        node_docs = _build_node_docs(repo_dir, tree_json)
         md = "\n".join(
             [
                 f"## Repository 분석 결과",
@@ -116,7 +233,7 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                 f"_repo name hint: **{title}**_",
             ]
         )
-        return AnalyzeResponse(markdown=md)
+        return AnalyzeResponse(markdown=md, tree=tree_json, node_docs=node_docs)
     except HTTPException:
         raise
     except Exception as e:
