@@ -3,3 +3,6 @@ uvicorn[standard]
 gitpython
 python-dotenv
 langchain-google-genai
+openai
+langgraph
+langchain-core

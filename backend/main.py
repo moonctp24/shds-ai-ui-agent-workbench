@@ -11,6 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from git import Repo
 from pydantic import BaseModel, Field
 
+from backend.app.api.workbench import router as workbench_router
+
 
 load_dotenv()
 
@@ -26,6 +28,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(workbench_router, prefix="/api")
 
 
 class AnalyzeRequest(BaseModel):
@@ -45,6 +49,7 @@ class AnalyzeResponse(BaseModel):
     markdown: str
     tree: list[TreeNode] | None = None
     node_docs: dict[str, str] | None = None
+    scenario_v1: dict | None = None
 
 
 def _is_ignored_dir(name: str) -> bool:
@@ -217,6 +222,10 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
 
         tree_json = _tree_json(repo_dir)
         node_docs = _build_node_docs(repo_dir, tree_json)
+        from backend.app.services.parser_service import scan_project_files
+        from backend.app.graph.nodes.scenario_v1 import scenario_v1_node
+        files = scan_project_files(repo_dir)
+        scenario_v1 = scenario_v1_node({"files": files, "local_repo_path": repo_dir}).get("scenario_v1")
         md = "\n".join(
             [
                 f"## Repository 분석 결과",
@@ -233,7 +242,7 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
                 f"_repo name hint: **{title}**_",
             ]
         )
-        return AnalyzeResponse(markdown=md, tree=tree_json, node_docs=node_docs)
+        return AnalyzeResponse(markdown=md, tree=tree_json, node_docs=node_docs, scenario_v1=scenario_v1)
     except HTTPException:
         raise
     except Exception as e:
