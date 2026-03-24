@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Check, Maximize2, Layers, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Trash2, GitBranch, Code2 } from "lucide-react"
 import dynamic from "next/dynamic"
+import { NodeDetail, TreeNode } from "@/lib/learned-project"
+import axios from "axios"
 import { learnedProject, NodeDetail, TreeNode } from "@/lib/learned-project"
 import { api } from "@/lib/api"
 import ReactMarkdown from "react-markdown"
@@ -10,7 +12,24 @@ import remarkGfm from "remark-gfm"
 
 const MermaidDiagram = dynamic(() => import("@/components/mermaid-diagram"), { ssr: false })
 
-type TreeItem = TreeNode
+type TreeItem = TreeNode & {
+  path?: string
+  is_dir?: boolean
+}
+
+type ScenarioNode = {
+  id: string
+  title: string
+  description?: string
+  path?: string
+  children?: ScenarioNode[]
+}
+
+type ScenarioV1 = {
+  project_name: string
+  version: string
+  nodes: ScenarioNode[]
+}
 
 export default function WorkspaceActivePage() {
   const [activeTab, setActiveTab] = useState("PREVIEW")
@@ -29,6 +48,7 @@ export default function WorkspaceActivePage() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [analysisMarkdown, setAnalysisMarkdown] = useState<string>("")
+  const [scenarioV1, setScenarioV1] = useState<ScenarioV1 | null>(null)
 
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
 
@@ -97,15 +117,36 @@ export default function WorkspaceActivePage() {
       .map(text => `${text}다.`)
   }, [modifiedScenario])
 
+  const scenarioNodeMap = useMemo(() => {
+    const map = new Map<string, ScenarioNode>()
+    if (!scenarioV1) return map
+    const walk = (nodes: ScenarioNode[]) => {
+      nodes.forEach(node => {
+        map.set(node.id, node)
+        if (node.children?.length) walk(node.children)
+      })
+    }
+    walk(scenarioV1.nodes)
+    return map
+  }, [scenarioV1])
+
+  const getScenarioDoc = (itemId: string | null) => {
+    if (!itemId) return ""
+    const detail = nodeDetails[itemId] ?? nodeDetails.root
+    const fallback = detail?.doc ?? ""
+    if (!scenarioV1) return fallback
+    return scenarioNodeMap.get(itemId)?.description ?? fallback
+  }
+
   useEffect(() => {
     if (!selectedItem) return
-    const detail = nodeDetails[selectedItem] ?? nodeDetails.root
-    if (!detail) return
-    setOriginalScenario(detail.doc)
+    const scenarioDoc = getScenarioDoc(selectedItem)
+    if (!scenarioDoc) return
+    setOriginalScenario(scenarioDoc)
     if (!modifiedNodes.includes(selectedItem)) {
-      setModifiedScenario(detail.doc)
+      setModifiedScenario(scenarioDoc)
     }
-  }, [nodeDetails, selectedItem, modifiedNodes])
+  }, [nodeDetails, selectedItem, selectedLabel, modifiedNodes, scenarioV1])
 
   const collectExpandedIds = (items: TreeItem[]) => {
     const ids: string[] = []
@@ -119,16 +160,61 @@ export default function WorkspaceActivePage() {
     return ids
   }
 
-  const handleAnalyzeScenario = () => {
-    setTreeData(learnedProject.tree)
-    setNodeDetails(learnedProject.details)
-    setProjectName(learnedProject.name)
-    setProjectVersion(learnedProject.version)
-    setOriginalScenario(learnedProject.scenarioOriginal)
-    setModifiedScenario(learnedProject.scenarioOriginal)
-    setSelectedItem("root")
-    setExpandedItems(collectExpandedIds(learnedProject.tree))
-    setModifiedNodes([])
+  const buildDetailsFromTree = (items: TreeItem[], docs?: Record<string, string>) => {
+    const details: Record<string, NodeDetail> = {}
+    const walk = (nodes: TreeItem[]) => {
+      nodes.forEach(node => {
+        const isFolder = node.label.endsWith("/")
+        const doc = docs?.[node.id]
+        details[node.id] = {
+          title: node.label,
+          doc: doc ?? (isFolder ? "폴더 항목입니다. 하위 파일/폴더를 포함합니다." : "파일 항목입니다."),
+          previewSummary: [node.label],
+          flowSteps: [{ title: node.label, desc: "프로젝트 트리 항목" }],
+          diagram: `flowchart TB\n  A["${node.label.replace(/"/g, "'")}"]`,
+          codeFiles: [],
+          status: "complete",
+        }
+        if (node.children?.length) walk(node.children)
+      })
+    }
+    walk(items)
+    return details
+  }
+
+  const buildTreeFromScenario = (scenario: ScenarioV1) => {
+    const walk = (nodes: ScenarioNode[], level: number): TreeItem[] =>
+      nodes.map(node => ({
+        id: node.id,
+        label: node.title,
+        level,
+        children: node.children ? walk(node.children, level + 1) : undefined,
+      }))
+    return walk(scenario.nodes, 0)
+  }
+
+  const buildDetailsFromScenario = (
+    scenario: ScenarioV1,
+    docs?: Record<string, string>
+  ) => {
+    const details: Record<string, NodeDetail> = {}
+    const walk = (nodes: ScenarioNode[]) => {
+      nodes.forEach(node => {
+        const doc = node.description || (node.path ? docs?.[node.path] : undefined)
+        details[node.id] = {
+          title: node.title,
+          doc: doc ?? "시나리오 설명이 없습니다.",
+          previewSummary: [node.title],
+          flowSteps: [{ title: node.title, desc: doc ?? "프로젝트 시나리오 노드" }],
+          diagram: `flowchart TB\n  A["${node.title.replace(/"/g, "'")}"]`,
+          codeFiles: [],
+          status: "complete",
+        }
+        if (node.children?.length) walk(node.children)
+      })
+    }
+    walk(scenario.nodes)
+    return details
   }
 
   const handleAnalyzeGit = async () => {
@@ -143,7 +229,39 @@ export default function WorkspaceActivePage() {
     try {
       const res = await api.post("/api/analyze", { git_url: url })
       const md = typeof res.data?.markdown === "string" ? res.data.markdown : ""
+      const tree = Array.isArray(res.data?.tree) ? (res.data.tree as TreeItem[]) : []
+      const nodeDocs = res.data?.node_docs as Record<string, string> | undefined
+      const scenarioV1 = res.data?.scenario_v1 as ScenarioV1 | undefined
       setAnalysisMarkdown(md || "분석 결과가 비어있습니다.")
+      setScenarioV1(scenarioV1 ?? null)
+      if (scenarioV1) {
+        const scenarioTree = buildTreeFromScenario(scenarioV1)
+        setTreeData(scenarioTree)
+        const details = buildDetailsFromScenario(scenarioV1, nodeDocs)
+        if (scenarioV1) {
+          details["scenario_v1"] = {
+            title: "v1.0 기획서",
+            doc: JSON.stringify(scenarioV1, null, 2),
+            previewSummary: ["v1.0 기획서 자동 생성 결과"],
+            flowSteps: [{ title: "기획서 생성", desc: "코드 스캔 기반 v1.0 초안" }],
+            diagram: 'flowchart TB\n  A["scenario_v1"]',
+            codeFiles: [],
+            status: "complete",
+          }
+        }
+        setNodeDetails(details)
+        setProjectName(url.split("/").pop()?.replace(".git", "") ?? "Git Project")
+        setProjectVersion("git")
+        setSelectedItem(scenarioTree[0]?.id ?? null)
+        setExpandedItems(collectExpandedIds(scenarioTree))
+      } else if (tree.length > 0) {
+        setTreeData(tree)
+        setNodeDetails(buildDetailsFromTree(tree, nodeDocs))
+        setProjectName(url.split("/").pop()?.replace(".git", "") ?? "Git Project")
+        setProjectVersion("git")
+        setSelectedItem(tree[0].id)
+        setExpandedItems(collectExpandedIds(tree))
+      }
       setActiveTab("CODE")
     } catch (e: any) {
       const isNetworkError = Boolean(e?.request) && !e?.response
@@ -275,20 +393,6 @@ export default function WorkspaceActivePage() {
                 <p className="mt-2 text-[12px] text-[#ef4444]">{analysisError}</p>
               )}
             </div>
-
-            {/* Scenario Tree Analysis Button */}
-            <button
-              className="w-full h-11 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-lg flex items-center justify-center gap-2 mb-4 transition-colors"
-              onClick={handleAnalyzeScenario}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="9" cy="3" r="2" stroke="currentColor" strokeWidth="1.5"/>
-                <circle cx="4" cy="11" r="2" stroke="currentColor" strokeWidth="1.5"/>
-                <circle cx="14" cy="11" r="2" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M9 5V7M9 7L4 9M9 7L14 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <span className="text-[14px] font-medium">시나리오 트리 분석</span>
-            </button>
 
             {/* Render Mode Toggle */}
             <div className="flex gap-2 mb-6">
@@ -672,10 +776,22 @@ export default function WorkspaceActivePage() {
                 </div>
 
                 {analysisMarkdown ? (
-                  <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {analysisMarkdown}
-                    </ReactMarkdown>
+                  <div className="space-y-4">
+                    {scenarioV1 && (
+                      <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[12px] font-semibold text-[#0f172a]">v1.0 시나리오 (JSON)</span>
+                        </div>
+                        <pre className="text-[12px] whitespace-pre-wrap text-[#0f172a]">
+                          {JSON.stringify(scenarioV1, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {analysisMarkdown}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
