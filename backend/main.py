@@ -17,12 +17,14 @@ from backend.app.api.workbench import router as workbench_router
 load_dotenv()
 
 app = FastAPI(title="AI UI Agent Backend", version="0.1.0")
+REPO_DIR = "/tmp/repos"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://shds-ai-ui-agent-workbench.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -207,7 +209,8 @@ def analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     if not (git_url.startswith("https://") or git_url.startswith("http://") or git_url.startswith("git@")):
         raise HTTPException(status_code=400, detail="git_url must be a valid HTTPS/SSH git clone URL")
 
-    temp_dir = tempfile.mkdtemp(prefix="repo_")
+    os.makedirs(REPO_DIR, exist_ok=True)
+    temp_dir = tempfile.mkdtemp(prefix="repo_", dir=REPO_DIR)
     repo_dir = os.path.join(temp_dir, "repo")
     try:
         repo = Repo.clone_from(git_url, repo_dir)

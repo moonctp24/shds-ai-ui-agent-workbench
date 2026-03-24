@@ -5,6 +5,8 @@ import { Check, Maximize2, Layers, Sparkles, LayoutGrid, ChevronDown, ChevronRig
 import dynamic from "next/dynamic"
 import { NodeDetail, TreeNode } from "@/lib/learned-project"
 import axios from "axios"
+import { learnedProject, NodeDetail, TreeNode } from "@/lib/learned-project"
+import { api } from "@/lib/api"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -225,7 +227,7 @@ export default function WorkspaceActivePage() {
     setAnalysisLoading(true)
     setAnalysisError(null)
     try {
-      const res = await axios.post("http://localhost:8000/api/analyze", { git_url: url })
+      const res = await api.post("/api/analyze", { git_url: url })
       const md = typeof res.data?.markdown === "string" ? res.data.markdown : ""
       const tree = Array.isArray(res.data?.tree) ? (res.data.tree as TreeItem[]) : []
       const nodeDocs = res.data?.node_docs as Record<string, string> | undefined
@@ -262,10 +264,19 @@ export default function WorkspaceActivePage() {
       }
       setActiveTab("CODE")
     } catch (e: any) {
+      const isNetworkError = Boolean(e?.request) && !e?.response
+      if (isNetworkError) {
+        console.error("API network error:", {
+          message: e?.message,
+          code: e?.code,
+          config: e?.config,
+        })
+        alert("서버 연결 확인")
+      }
       const message =
         e?.response?.data?.detail ||
         e?.message ||
-        "분석에 실패했습니다. 백엔드(8000) 실행 및 CORS 설정을 확인해주세요."
+        "분석에 실패했습니다. 백엔드 실행 및 CORS 설정을 확인해주세요."
       setAnalysisError(String(message))
       setAnalysisMarkdown("")
       setActiveTab("CODE")
