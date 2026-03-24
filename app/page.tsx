@@ -46,6 +46,7 @@ export default function WorkspaceActivePage() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [analysisMarkdown, setAnalysisMarkdown] = useState<string>("")
+  const [scenarioJsonOpen, setScenarioJsonOpen] = useState(false)
   const [scenarioV1, setScenarioV1] = useState<ScenarioV1 | null>(null)
 
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
@@ -768,12 +769,20 @@ export default function WorkspaceActivePage() {
                   <div className="space-y-4">
                     {scenarioV1 && (
                       <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
-                        <div className="flex items-center justify-between mb-3">
+                        <button
+                          className="w-full flex items-center justify-between text-left"
+                          onClick={() => setScenarioJsonOpen(prev => !prev)}
+                        >
                           <span className="text-[12px] font-semibold text-[#0f172a]">v1.0 시나리오 (JSON)</span>
-                        </div>
-                        <pre className="text-[12px] whitespace-pre-wrap text-[#0f172a]">
-                          {JSON.stringify(scenarioV1, null, 2)}
-                        </pre>
+                          <span className="text-[12px] text-[#64748b]">
+                            {scenarioJsonOpen ? "접기" : "펼치기"}
+                          </span>
+                        </button>
+                        {scenarioJsonOpen && (
+                          <pre className="mt-3 text-[12px] whitespace-pre-wrap text-[#0f172a]">
+                            {JSON.stringify(scenarioV1, null, 2)}
+                          </pre>
+                        )}
                       </div>
                     )}
                     <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">

@@ -17,8 +17,8 @@ def analyze_repo(payload: AnalyzeRepoRequest) -> dict:
         graph = build_graph()
         result = graph.invoke(
             {
-                "repo_url": payload.repo_url,
-                "branch": payload.branch,
+                "repo_url": payload["repo_url"],
+                "branch": payload.get("branch", "main"),
             }
         )
         return result
