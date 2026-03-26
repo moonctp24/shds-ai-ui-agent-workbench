@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from backend.app.graph.builder import build_graph
 
@@ -8,7 +8,7 @@ router = APIRouter()
 
 class AnalyzeRepoRequest(BaseModel):
     repo_url: str = Field(..., min_length=1)
-    branch: str = Field("main")
+    branch: str = Field(default="main")
 
 
 @router.post("/analyze-repo")
@@ -17,8 +17,8 @@ def analyze_repo(payload: AnalyzeRepoRequest) -> dict:
         graph = build_graph()
         result = graph.invoke(
             {
-                "repo_url": payload["repo_url"],
-                "branch": payload.get("branch", "main"),
+                "repo_url": payload.repo_url,
+                "branch": payload.branch,
             }
         )
         return result

@@ -31,8 +31,11 @@ app
 
 
 ## 로컬서버 실행
-- yarn실행으로 강제 설정됨.
+- front서버: yarn실행으로 강제 설정됨.
+- back서버: python기동
 
 ```bash
 yarn dev
+```
+python -m uvicorn backend.main:app --reload --port 8000
 ```
