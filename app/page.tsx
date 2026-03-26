@@ -139,7 +139,9 @@ export default function WorkspaceActivePage() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [analysisMarkdown, setAnalysisMarkdown] = useState<string>("")
+  const [fileTreeMarkdown, setFileTreeMarkdown] = useState<string>("")
   const [scenarioJsonOpen, setScenarioJsonOpen] = useState(false)
+  const [fileTreeOpen, setFileTreeOpen] = useState(false)
   const [scenarioV1, setScenarioV1] = useState<ScenarioV1 | null>(null)
   const [flowData, setFlowData] = useState<FlowData | null>(null)
   const [diagramData, setDiagramData] = useState<DiagramData | null>(null)
@@ -172,7 +174,7 @@ export default function WorkspaceActivePage() {
     const collect = (node: TreeItem): string[] => {
       const ids = [node.id]
       if (node.children?.length) {
-        node.children.forEach(child => {
+        node.children.forEach((child: TreeItem) => {
           ids.push(...collect(child))
         })
       }
@@ -311,6 +313,69 @@ export default function WorkspaceActivePage() {
     return details
   }
 
+  const buildFileTreeMarkdown = (
+    files: Array<{ path: string }> | undefined,
+    repoUrl?: string,
+  ) => {
+    if (!files?.length) return ""
+
+    type FileNode = {
+      name: string
+      children: Map<string, FileNode>
+      isFile?: boolean
+    }
+
+    const root: FileNode = { name: "", children: new Map() }
+
+    for (const file of files) {
+      const parts = file.path.split("/").filter(Boolean)
+      let current = root
+      parts.forEach((part, idx) => {
+        const existing = current.children.get(part)
+        const node = existing ?? { name: part, children: new Map<string, FileNode>() }
+        if (idx === parts.length - 1) node.isFile = true
+        current.children.set(part, node)
+        current = node
+      })
+    }
+
+    const lines: string[] = []
+    const walk = (node: FileNode, prefix: string) => {
+      const entries = Array.from(node.children.values()).sort((a, b) => {
+        const aDir = a.children.size > 0 && !a.isFile
+        const bDir = b.children.size > 0 && !b.isFile
+        if (aDir !== bDir) return aDir ? -1 : 1
+        return a.name.localeCompare(b.name)
+      })
+
+      entries.forEach((child, index) => {
+        const isDir = child.children.size > 0 && !child.isFile
+        const connector = index === entries.length - 1 ? "\\-- " : "|-- "
+        lines.push(`${prefix}${connector}${child.name}${isDir ? "/" : ""}`)
+        if (child.children.size > 0) {
+          const extension = index === entries.length - 1 ? "    " : "|   "
+          walk(child, prefix + extension)
+        }
+      })
+    }
+
+    walk(root, "")
+    const tree = lines.join("\n")
+    return [
+      "## Repository 분석 결과",
+      "",
+      repoUrl ? `- **URL**: \`${repoUrl}\`` : "",
+      "",
+      "### File Tree",
+      "",
+      "```text",
+      tree,
+      "```",
+    ]
+      .filter(Boolean)
+      .join("\n")
+  }
+
   const handleAnalyzeGit = async () => {
   const url = gitUrl.trim()
   if (!url) {
@@ -327,17 +392,22 @@ export default function WorkspaceActivePage() {
       branch: "main",
     })
 
-    const payload = res.data?.result ?? res.data ?? {}
+    const raw = res.data ?? {}
+    const payload = raw?.result ?? raw ?? {}
 
     const nextScenario = (payload.scenario_v1 ?? null) as ScenarioV1 | null
     const nextFlow = (payload.flow ?? null) as FlowData | null
     const nextDiagram = (payload.diagram ?? null) as DiagramData | null
     const nextCodeGuide = (payload.code_guide ?? null) as CodeGuideData | null
+    const nextMarkdown = (payload.markdown ?? payload.result?.markdown ?? "") as string
+    const nextFileTreeMarkdown = buildFileTreeMarkdown(raw.files ?? payload.files, url)
 
     setScenarioV1(nextScenario)
     setFlowData(nextFlow)
     setDiagramData(nextDiagram)
     setCodeGuideData(nextCodeGuide)
+    setAnalysisMarkdown(nextMarkdown)
+    setFileTreeMarkdown(nextFileTreeMarkdown)
 
     if (nextScenario) {
       const scenarioTree = buildTreeFromScenario(nextScenario)
@@ -366,7 +436,6 @@ export default function WorkspaceActivePage() {
       setProjectVersion(nextScenario.version || "v1.0")
       setSelectedItem(scenarioTree[0]?.id ?? null)
       setExpandedItems(collectExpandedIds(scenarioTree))
-      setAnalysisMarkdown("")
     } else {
       setTreeData([])
       setNodeDetails({})
@@ -393,6 +462,7 @@ export default function WorkspaceActivePage() {
 
     setAnalysisError(String(message))
     setAnalysisMarkdown("")
+    setFileTreeMarkdown("")
     setScenarioV1(null)
     setFlowData(null)
     setDiagramData(null)
@@ -467,7 +537,7 @@ export default function WorkspaceActivePage() {
         </div>
         {hasChildren && isExpanded && (
           <div>
-            {item.children!.map(child => renderTreeItem(child, depth + 1))}
+            {item.children!.map((child: TreeItem) => renderTreeItem(child, depth + 1))}
           </div>
         )}
       </div>
@@ -713,101 +783,10 @@ export default function WorkspaceActivePage() {
                       {selectedDetail?.doc ?? "선택한 요소의 상세 정보가 아직 없습니다."}
                     </p>
                   </div>
-                  <div
-                    className={`mt-4 rounded-xl p-4 shadow-sm border ${
-                      isHighlighted("dashboard-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
-                    }`}
-                  >
-                    <div className={`flex items-start justify-between gap-3 ${isHighlighted("dashboard-header") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
-                      <div className={isHighlighted("dashboard-title") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                        <h4 className="text-[13px] font-semibold text-[#0f172a]">내 카드 관리 대시보드</h4>
-                        <p className="text-[11px] text-[#94a3b8] mt-1">보유 카드 현황과 결제 예정 금액 요약</p>
-                      </div>
-                      <span className={`text-[10px] text-white bg-[#4f46e5] px-2 py-1 rounded-full ${isHighlighted("dashboard-badge") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
-                        v1.0
-                      </span>
-                    </div>
-                    <div className={`mt-3 grid grid-cols-2 gap-2 ${isHighlighted("dashboard-metrics") ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
-                      <div className={`rounded-lg bg-[#f1f5f9] p-2 ${isHighlighted("metric-total-limit") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                        <p className="text-[10px] text-[#64748b]">총 이용 한도</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">₩9,000,000</p>
-                      </div>
-                      <div className={`rounded-lg bg-[#f1f5f9] p-2 ${isHighlighted("metric-total-billing") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                        <p className="text-[10px] text-[#64748b]">총 결제 예정 금액</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">₩4,350,000</p>
-                      </div>
-                      <div className={`rounded-lg bg-[#f8fafc] p-2 ${isHighlighted("metric-active-cards") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                        <p className="text-[10px] text-[#64748b]">정상 이용 카드</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">2장</p>
-                      </div>
-                      <div className={`rounded-lg bg-[#f8fafc] p-2 ${isHighlighted("metric-paused-cards") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                        <p className="text-[10px] text-[#64748b]">일시정지 카드</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">1장</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className={`mt-3 rounded-xl p-4 shadow-sm border ${
-                      isHighlighted("card-list-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
-                    }`}
-                  >
-                    <div className={`flex items-baseline justify-between ${isHighlighted("card-list-header") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
-                      <h4 className={`text-[13px] font-semibold text-[#0f172a] ${isHighlighted("card-list-title") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
-                        보유 카드 리스트
-                      </h4>
-                      <span className={`text-[11px] text-[#64748b] ${isHighlighted("card-list-count") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
-                        총 3장
-                      </span>
-                    </div>
-                    <div className={`mt-3 space-y-2 ${isHighlighted("card-items") ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
-                      {[
-                        { id: "card-1", name: "신한 Deep Dream 카드", last4: "1234", limit: "₩3,000,000", billing: "₩1,250,000", status: "정상" },
-                        { id: "card-2", name: "신한 The Best-F 카드", last4: "5678", limit: "₩5,000,000", billing: "₩2,750,000", status: "정상" },
-                        { id: "card-3", name: "신한 체크카드 S-Line", last4: "9012", limit: "₩1,000,000", billing: "₩350,000", status: "일시정지" }
-                      ].map((card) => {
-                        return (
-                          <div
-                            key={card.id}
-                            className={`rounded-lg border p-2 transition-colors ${
-                              isHighlighted(card.id) ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
-                            }`}
-                          >
-                            <div className={`flex items-center justify-between ${isHighlighted(`${card.id}-header`) ? "ring-2 ring-[#fb923c]/60" : ""}`}>
-                              <div className={isHighlighted(`${card.id}-info`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                                <p className="text-[12px] font-semibold text-[#0f172a]">{card.name}</p>
-                                <p className="text-[10px] text-[#94a3b8]">{`•••• ${card.last4}`}</p>
-                              </div>
-                              <span className={`text-[10px] font-medium ${card.status === "정상" ? "text-[#10b981]" : "text-[#f59e0b]"} ${isHighlighted(`${card.id}-status`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
-                                {card.status}
-                              </span>
-                            </div>
-                            <div className={`mt-2 grid grid-cols-2 gap-2 text-[10px] text-[#64748b] ${isHighlighted(`${card.id}-metrics`) ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
-                              <div className={isHighlighted(`${card.id}-limit`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                                <p>이용 한도</p>
-                                <p className="text-[11px] font-semibold text-[#0f172a]">{card.limit}</p>
-                              </div>
-                              <div className={isHighlighted(`${card.id}-billing`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                                <p>결제 예정</p>
-                                <p className="text-[11px] font-semibold text-[#0f172a]">{card.billing}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                  <div
-                    className={`mt-3 rounded-xl p-4 shadow-sm border flex items-center justify-between ${
-                      isHighlighted("card-count-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
-                    }`}
-                  >
-                    <div className={isHighlighted("card-count-info") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                      <p className="text-[12px] font-semibold text-[#0f172a]">카드 개수 표시</p>
-                      <p className="text-[11px] text-[#64748b]">보유 카드 합계</p>
-                    </div>
-                    <span className={`text-[14px] font-semibold text-[#4f46e5] ${isHighlighted("card-count-value") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
-                      3장
-                    </span>
+                  <div className="mt-4 rounded-xl border border-[#e4eaf2] bg-white p-4 shadow-sm">
+                    <p className="text-[12px] text-[#64748b]">
+                      분석 결과 기반 프리뷰가 준비되면 이 영역에 표시됩니다.
+                    </p>
                   </div>
                     </>
                   )}
@@ -923,6 +902,29 @@ export default function WorkspaceActivePage() {
                     )}
                   </div>
                 )}
+
+                <div className="bg-white border border-[#e4eaf2] rounded-xl p-5 mb-4">
+                  <button
+                    className="w-full flex items-center justify-between text-left"
+                    onClick={() => setFileTreeOpen((prev) => !prev)}
+                  >
+                    <span className="text-[12px] font-semibold text-[#0f172a]">파일 트리</span>
+                    <span className="text-[12px] text-[#64748b]">
+                      {fileTreeOpen ? "접기" : "펼치기"}
+                    </span>
+                  </button>
+                  {fileTreeOpen && (
+                    <div className="mt-3 text-[12px] text-[#0f172a]">
+                      {fileTreeMarkdown ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {fileTreeMarkdown}
+                        </ReactMarkdown>
+                      ) : (
+                        <span className="text-[12px] text-[#94a3b8]">파일 트리가 없습니다.</span>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {codeGuideData?.items?.length ? (
                   <div className="space-y-4">
