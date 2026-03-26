@@ -1,11 +1,20 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Check, Maximize2, Layers, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Trash2, GitBranch, Code2, x } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import {
+  Check,
+  Maximize2,
+  Layers,
+  Sparkles,
+  LayoutGrid,
+  ChevronDown,
+  ChevronRight,
+  Trash2,
+  GitBranch,
+  Code2,
+} from "lucide-react"
 import dynamic from "next/dynamic"
 import { NodeDetail, TreeNode } from "@/lib/learned-project"
-import axios from "axios"
-import { learnedProject, NodeDetail, TreeNode } from "@/lib/learned-project"
 import { api } from "@/lib/api"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -31,6 +40,88 @@ type ScenarioV1 = {
   nodes: ScenarioNode[]
 }
 
+type FlowStep = {
+  step: number
+  node_id: string
+  title: string
+  label: string
+  description: string
+  section: string
+  status: string
+  highlight?: {
+    color: string
+    reason: string
+  } | null
+}
+
+type FlowData = {
+  project_name: string
+  version: string
+  view_type: "FLOW"
+  title: string
+  summary: {
+    total_steps: number
+    selected_node_id?: string | null
+    modified_node_ids?: string[]
+  }
+  steps: FlowStep[]
+}
+
+type DiagramNodeMeta = {
+  node_id: string
+  title: string
+  section: string
+  status: string
+  highlight?: {
+    color: string
+    reason: string
+  } | null
+}
+
+type DiagramData = {
+  project_name: string
+  version: string
+  view_type: "DIAGRAM"
+  title: string
+  mermaid: string
+  nodes: DiagramNodeMeta[]
+  summary: {
+    total_nodes: number
+    selected_nodes: string[]
+    modified_nodes: string[]
+    direction: string
+  }
+}
+
+type CodeGuideItem = {
+  item_no: number
+  node_id: string
+  title: string
+  file_name: string
+  file_type: string
+  badge: string
+  status: string
+  highlight?: {
+    color: string
+    reason: string
+  } | null
+  reason: string
+  guides: string[]
+}
+
+type CodeGuideData = {
+  project_name: string
+  version: string
+  view_type: "CODE"
+  title: string
+  summary: {
+    total_items: number
+    selected_node_id?: string | null
+    modified_node_ids?: string[]
+  }
+  items: CodeGuideItem[]
+}
+
 export default function WorkspaceActivePage() {
   const [activeTab, setActiveTab] = useState("PREVIEW")
   const [activeRenderMode, setActiveRenderMode] = useState<"batch" | "individual">("batch")
@@ -48,8 +139,15 @@ export default function WorkspaceActivePage() {
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [analysisMarkdown, setAnalysisMarkdown] = useState<string>("")
+  const [fileTreeMarkdown, setFileTreeMarkdown] = useState<string>("")
   const [scenarioJsonOpen, setScenarioJsonOpen] = useState(false)
+  const [fileTreeOpen, setFileTreeOpen] = useState(false)
   const [scenarioV1, setScenarioV1] = useState<ScenarioV1 | null>(null)
+  const [flowData, setFlowData] = useState<FlowData | null>(null)
+  const [diagramData, setDiagramData] = useState<DiagramData | null>(null)
+  const [codeGuideData, setCodeGuideData] = useState<CodeGuideData | null>(null)
+  const [previewData, setPreviewData] = useState<any | null>(null)
+  const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
 
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
 
@@ -78,7 +176,7 @@ export default function WorkspaceActivePage() {
     const collect = (node: TreeItem): string[] => {
       const ids = [node.id]
       if (node.children?.length) {
-        node.children.forEach(child => {
+        node.children.forEach((child: TreeItem) => {
           ids.push(...collect(child))
         })
       }
@@ -149,6 +247,11 @@ export default function WorkspaceActivePage() {
     }
   }, [nodeDetails, selectedItem, selectedLabel, modifiedNodes, scenarioV1])
 
+  useEffect(() => {
+    if (!previewFrameRef.current || !selectedItem) return
+    previewFrameRef.current.contentWindow?.postMessage({ selectedNodeId: selectedItem }, "*")
+  }, [selectedItem, previewData?.html])
+
   const collectExpandedIds = (items: TreeItem[]) => {
     const ids: string[] = []
     const walk = (nodes: TreeItem[]) => {
@@ -194,97 +297,188 @@ export default function WorkspaceActivePage() {
     return walk(scenario.nodes, 0)
   }
 
-  const buildDetailsFromScenario = (
-    scenario: ScenarioV1,
-    docs?: Record<string, string>
-  ) => {
+  const buildDetailsFromScenario = (scenario: ScenarioV1) => {
     const details: Record<string, NodeDetail> = {}
+  
     const walk = (nodes: ScenarioNode[]) => {
-      nodes.forEach(node => {
-        const doc = node.description || (node.path ? docs?.[node.path] : undefined)
+      nodes.forEach((node) => {
         details[node.id] = {
           title: node.title,
-          doc: doc ?? "시나리오 설명이 없습니다.",
+          doc: node.description ?? "시나리오 설명이 없습니다.",
           previewSummary: [node.title],
-          flowSteps: [{ title: node.title, desc: doc ?? "프로젝트 시나리오 노드" }],
-          diagram: `flowchart TB\n  A["${node.title.replace(/"/g, "'")}"]`,
+          flowSteps: [],
+          diagram: "",
           codeFiles: [],
           status: "complete",
         }
+  
         if (node.children?.length) walk(node.children)
       })
     }
+  
     walk(scenario.nodes)
     return details
   }
 
-  const handleAnalyzeGit = async () => {
-    const url = gitUrl.trim()
-    if (!url) {
-      setAnalysisError("Git URL을 입력해주세요.")
-      return
+  const buildFileTreeMarkdown = (
+    files: Array<{ path: string }> | undefined,
+    repoUrl?: string,
+  ) => {
+    if (!files?.length) return ""
+
+    type FileNode = {
+      name: string
+      children: Map<string, FileNode>
+      isFile?: boolean
     }
 
-    setAnalysisLoading(true)
-    setAnalysisError(null)
-    try {
-      const res = await api.post("/api/analyze", { git_url: url })
-      const md = typeof res.data?.markdown === "string" ? res.data.markdown : ""
-      const tree = Array.isArray(res.data?.tree) ? (res.data.tree as TreeItem[]) : []
-      const nodeDocs = res.data?.node_docs as Record<string, string> | undefined
-      const scenarioV1 = res.data?.scenario_v1 as ScenarioV1 | undefined
-      setAnalysisMarkdown(md || "분석 결과가 비어있습니다.")
-      setScenarioV1(scenarioV1 ?? null)
-      if (scenarioV1) {
-        const scenarioTree = buildTreeFromScenario(scenarioV1)
-        setTreeData(scenarioTree)
-        const details = buildDetailsFromScenario(scenarioV1, nodeDocs)
-        if (scenarioV1) {
-          details["scenario_v1"] = {
-            title: "v1.0 기획서",
-            doc: JSON.stringify(scenarioV1, null, 2),
-            previewSummary: ["v1.0 기획서 자동 생성 결과"],
-            flowSteps: [{ title: "기획서 생성", desc: "코드 스캔 기반 v1.0 초안" }],
-            diagram: 'flowchart TB\n  A["scenario_v1"]',
-            codeFiles: [],
-            status: "complete",
-          }
-        }
-        setNodeDetails(details)
-        setProjectName(url.split("/").pop()?.replace(".git", "") ?? "Git Project")
-        setProjectVersion("git")
-        setSelectedItem(scenarioTree[0]?.id ?? null)
-        setExpandedItems(collectExpandedIds(scenarioTree))
-      } else if (tree.length > 0) {
-        setTreeData(tree)
-        setNodeDetails(buildDetailsFromTree(tree, nodeDocs))
-        setProjectName(url.split("/").pop()?.replace(".git", "") ?? "Git Project")
-        setProjectVersion("git")
-        setSelectedItem(tree[0].id)
-        setExpandedItems(collectExpandedIds(tree))
-      }
-      setActiveTab("CODE")
-    } catch (e: any) {
-      const isNetworkError = Boolean(e?.request) && !e?.response
-      if (isNetworkError) {
-        console.error("API network error:", {
-          message: e?.message,
-          code: e?.code,
-          config: e?.config,
-        })
-        alert("서버 연결 확인")
-      }
-      const message =
-        e?.response?.data?.detail ||
-        e?.message ||
-        "분석에 실패했습니다. 백엔드 실행 및 CORS 설정을 확인해주세요."
-      setAnalysisError(String(message))
-      setAnalysisMarkdown("")
-      setActiveTab("CODE")
-    } finally {
-      setAnalysisLoading(false)
+    const root: FileNode = { name: "", children: new Map() }
+
+    for (const file of files) {
+      const parts = file.path.split("/").filter(Boolean)
+      let current = root
+      parts.forEach((part, idx) => {
+        const existing = current.children.get(part)
+        const node = existing ?? { name: part, children: new Map<string, FileNode>() }
+        if (idx === parts.length - 1) node.isFile = true
+        current.children.set(part, node)
+        current = node
+      })
     }
+
+    const lines: string[] = []
+    const walk = (node: FileNode, prefix: string) => {
+      const entries = Array.from(node.children.values()).sort((a, b) => {
+        const aDir = a.children.size > 0 && !a.isFile
+        const bDir = b.children.size > 0 && !b.isFile
+        if (aDir !== bDir) return aDir ? -1 : 1
+        return a.name.localeCompare(b.name)
+      })
+
+      entries.forEach((child, index) => {
+        const isDir = child.children.size > 0 && !child.isFile
+        const connector = index === entries.length - 1 ? "\\-- " : "|-- "
+        lines.push(`${prefix}${connector}${child.name}${isDir ? "/" : ""}`)
+        if (child.children.size > 0) {
+          const extension = index === entries.length - 1 ? "    " : "|   "
+          walk(child, prefix + extension)
+        }
+      })
+    }
+
+    walk(root, "")
+    const tree = lines.join("\n")
+    return [
+      "## Repository 분석 결과",
+      "",
+      repoUrl ? `- **URL**: \`${repoUrl}\`` : "",
+      "",
+      "### File Tree",
+      "",
+      "```text",
+      tree,
+      "```",
+    ]
+      .filter(Boolean)
+      .join("\n")
   }
+
+  const handleAnalyzeGit = async () => {
+  const url = gitUrl.trim()
+  if (!url) {
+    setAnalysisError("Git URL을 입력해주세요.")
+    return
+  }
+
+  setAnalysisLoading(true)
+  setAnalysisError(null)
+
+  try {
+    const res = await api.post("/api/analyze-repo", {
+      repo_url: url,
+      branch: "main",
+    })
+
+    const raw = res.data ?? {}
+    const payload = raw?.result ?? raw ?? {}
+
+    const nextScenario = (raw.scenario_v1 ?? payload.scenario_v1 ?? null) as ScenarioV1 | null
+    const nextFlow = (raw.flow ?? payload.flow ?? null) as FlowData | null
+    const nextDiagram = (raw.diagram ?? payload.diagram ?? null) as DiagramData | null
+    const nextCodeGuide = (raw.code_guide ?? payload.code_guide ?? null) as CodeGuideData | null
+    const nextMarkdown = (payload.markdown ?? payload.result?.markdown ?? "") as string
+    const nextFileTreeMarkdown = buildFileTreeMarkdown(raw.files ?? payload.files, url)
+    const nextPreview = (payload.preview ?? null)
+    setScenarioV1(nextScenario)
+    setFlowData(nextFlow)
+    setDiagramData(nextDiagram)
+    setCodeGuideData(nextCodeGuide)
+    setAnalysisMarkdown(nextMarkdown)
+    setFileTreeMarkdown(nextFileTreeMarkdown)
+    setPreviewData(nextPreview)
+
+    if (nextScenario) {
+      const scenarioTree = buildTreeFromScenario(nextScenario)
+      setTreeData(scenarioTree)
+
+      const details = buildDetailsFromScenario(nextScenario)
+      details["scenario_v1"] = {
+        title: "v1.0 기획서",
+        doc: JSON.stringify(nextScenario, null, 2),
+        previewSummary: ["v1.0 기획서 자동 생성 결과"],
+        flowSteps: nextFlow?.steps?.map((step) => ({
+          title: step.title,
+          desc: step.description,
+        })) ?? [{ title: "기획서 생성", desc: "코드 스캔 기반 v1.0 초안" }],
+        diagram: nextDiagram?.mermaid ?? 'flowchart TB\n  A["scenario_v1"]',
+        codeFiles:
+          nextCodeGuide?.items?.map((item) => ({
+            name: item.file_name,
+            content: item.guides.join("\n"),
+          })) ?? [],
+        status: "complete",
+      }
+
+      setNodeDetails(details)
+      setProjectName(nextScenario.project_name || url.split("/").pop()?.replace(".git", "") || "Git Project")
+      setProjectVersion(nextScenario.version || "v1.0")
+      setSelectedItem(scenarioTree[0]?.id ?? null)
+      setExpandedItems(collectExpandedIds(scenarioTree))
+    } else {
+      setTreeData([])
+      setNodeDetails({})
+      setProjectName(url.split("/").pop()?.replace(".git", "") || "Git Project")
+      setProjectVersion("-")
+    }
+
+    setActiveTab("PREVIEW")
+  } catch (e: any) {
+    const isNetworkError = Boolean(e?.request) && !e?.response
+    if (isNetworkError) {
+      console.error("API network error:", {
+        message: e?.message,
+        code: e?.code,
+        config: e?.config,
+      })
+      alert("서버 연결 확인")
+    }
+
+    const message =
+      e?.response?.data?.detail ||
+      e?.message ||
+      "분석에 실패했습니다. 백엔드 실행 및 API 경로를 확인해주세요."
+
+    setAnalysisError(String(message))
+    setAnalysisMarkdown("")
+    setFileTreeMarkdown("")
+    setScenarioV1(null)
+    setFlowData(null)
+    setDiagramData(null)
+    setCodeGuideData(null)
+  } finally {
+    setAnalysisLoading(false)
+  }
+}
 
   const toggleExpand = (id: string) => {
     setExpandedItems(prev => 
@@ -351,7 +545,7 @@ export default function WorkspaceActivePage() {
         </div>
         {hasChildren && isExpanded && (
           <div>
-            {item.children!.map(child => renderTreeItem(child, depth + 1))}
+            {item.children!.map((child: TreeItem) => renderTreeItem(child, depth + 1))}
           </div>
         )}
       </div>
@@ -569,179 +763,90 @@ export default function WorkspaceActivePage() {
 
           {/* Right Content - Tab Content */}
           <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
-            {activeTab === "PREVIEW" && (
-              /* iPhone Frame */
-              <div className={`w-[453px] h-[877px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl ${isHighlighted("preview-device") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                <div className={`w-full h-full bg-[#f5f5f5] rounded-[32px] relative overflow-hidden ${isHighlighted("preview-screen") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                  {/* Notch */}
-                  <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-[#1a1a1a] rounded-b-2xl ${isHighlighted("preview-notch") ? "ring-2 ring-[#fb923c]" : ""}`} />
-                  
-                  {/* Screen Content */}
-                  <div className={`w-full h-full overflow-y-auto px-5 pt-10 pb-6 ${isHighlighted("preview-content") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                  {treeData.length === 0 ? (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-[13px] text-[#94a3b8]">프리뷰 준비 완료</p>
-                        <p className="text-[11px] text-[#cbd5f5] mt-2">시나리오 트리 분석을 실행하세요</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                  <div
-                    className={`mb-4 rounded-xl bg-white p-4 shadow-sm ${isHighlighted("preview-spec") ? "ring-2 ring-[#fb923c]" : ""}`}
-                  >
-                    <h3 className="text-[14px] font-semibold text-[#0f172a] mb-2">
-                      {selectedDetail?.title ?? selectedLabel ?? "Preview"}
-                    </h3>
-                    <p className="text-[12px] text-[#64748b] leading-relaxed">
-                      {selectedDetail?.doc ?? "선택한 요소의 상세 정보가 아직 없습니다."}
-                    </p>
-                  </div>
-                  <div
-                    className={`mt-4 rounded-xl p-4 shadow-sm border ${
-                      isHighlighted("dashboard-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
-                    }`}
-                  >
-                    <div className={`flex items-start justify-between gap-3 ${isHighlighted("dashboard-header") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
-                      <div className={isHighlighted("dashboard-title") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                        <h4 className="text-[13px] font-semibold text-[#0f172a]">내 카드 관리 대시보드</h4>
-                        <p className="text-[11px] text-[#94a3b8] mt-1">보유 카드 현황과 결제 예정 금액 요약</p>
-                      </div>
-                      <span className={`text-[10px] text-white bg-[#4f46e5] px-2 py-1 rounded-full ${isHighlighted("dashboard-badge") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
-                        v1.0
-                      </span>
-                    </div>
-                    <div className={`mt-3 grid grid-cols-2 gap-2 ${isHighlighted("dashboard-metrics") ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
-                      <div className={`rounded-lg bg-[#f1f5f9] p-2 ${isHighlighted("metric-total-limit") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                        <p className="text-[10px] text-[#64748b]">총 이용 한도</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">₩9,000,000</p>
-                      </div>
-                      <div className={`rounded-lg bg-[#f1f5f9] p-2 ${isHighlighted("metric-total-billing") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                        <p className="text-[10px] text-[#64748b]">총 결제 예정 금액</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">₩4,350,000</p>
-                      </div>
-                      <div className={`rounded-lg bg-[#f8fafc] p-2 ${isHighlighted("metric-active-cards") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                        <p className="text-[10px] text-[#64748b]">정상 이용 카드</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">2장</p>
-                      </div>
-                      <div className={`rounded-lg bg-[#f8fafc] p-2 ${isHighlighted("metric-paused-cards") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                        <p className="text-[10px] text-[#64748b]">일시정지 카드</p>
-                        <p className="text-[12px] font-semibold text-[#0f172a]">1장</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className={`mt-3 rounded-xl p-4 shadow-sm border ${
-                      isHighlighted("card-list-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
-                    }`}
-                  >
-                    <div className={`flex items-baseline justify-between ${isHighlighted("card-list-header") ? "ring-2 ring-[#fb923c]/60" : ""}`}>
-                      <h4 className={`text-[13px] font-semibold text-[#0f172a] ${isHighlighted("card-list-title") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
-                        보유 카드 리스트
-                      </h4>
-                      <span className={`text-[11px] text-[#64748b] ${isHighlighted("card-list-count") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
-                        총 3장
-                      </span>
-                    </div>
-                    <div className={`mt-3 space-y-2 ${isHighlighted("card-items") ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
-                      {[
-                        { id: "card-1", name: "신한 Deep Dream 카드", last4: "1234", limit: "₩3,000,000", billing: "₩1,250,000", status: "정상" },
-                        { id: "card-2", name: "신한 The Best-F 카드", last4: "5678", limit: "₩5,000,000", billing: "₩2,750,000", status: "정상" },
-                        { id: "card-3", name: "신한 체크카드 S-Line", last4: "9012", limit: "₩1,000,000", billing: "₩350,000", status: "일시정지" }
-                      ].map((card) => {
-                        return (
-                          <div
-                            key={card.id}
-                            className={`rounded-lg border p-2 transition-colors ${
-                              isHighlighted(card.id) ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
-                            }`}
-                          >
-                            <div className={`flex items-center justify-between ${isHighlighted(`${card.id}-header`) ? "ring-2 ring-[#fb923c]/60" : ""}`}>
-                              <div className={isHighlighted(`${card.id}-info`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                                <p className="text-[12px] font-semibold text-[#0f172a]">{card.name}</p>
-                                <p className="text-[10px] text-[#94a3b8]">{`•••• ${card.last4}`}</p>
-                              </div>
-                              <span className={`text-[10px] font-medium ${card.status === "정상" ? "text-[#10b981]" : "text-[#f59e0b]"} ${isHighlighted(`${card.id}-status`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
-                                {card.status}
-                              </span>
-                            </div>
-                            <div className={`mt-2 grid grid-cols-2 gap-2 text-[10px] text-[#64748b] ${isHighlighted(`${card.id}-metrics`) ? "ring-2 ring-[#fb923c]/60 rounded-lg" : ""}`}>
-                              <div className={isHighlighted(`${card.id}-limit`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                                <p>이용 한도</p>
-                                <p className="text-[11px] font-semibold text-[#0f172a]">{card.limit}</p>
-                              </div>
-                              <div className={isHighlighted(`${card.id}-billing`) ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                                <p>결제 예정</p>
-                                <p className="text-[11px] font-semibold text-[#0f172a]">{card.billing}</p>
-                              </div>
-                            </div>
-                          </div>
+          {activeTab === "PREVIEW" && (
+            <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
+              <div className="flex justify-center">
+                <div className="w-[453px] min-h-[877px] bg-white rounded-[32px] border border-[#e4eaf2] overflow-hidden">
+                  {previewData?.html ? (
+                    <iframe
+                      title="preview"
+                      className="w-full h-[877px] bg-white"
+                      ref={previewFrameRef}
+                      srcDoc={previewData.html}
+                      onLoad={() => {
+                        if (!selectedItem) return
+                        previewFrameRef.current?.contentWindow?.postMessage(
+                          { selectedNodeId: selectedItem },
+                          "*"
                         )
-                      })}
+                      }}
+                    />
+                  ) : (
+                    <div className="h-[877px] flex items-center justify-center text-[12px] text-[#94a3b8]">
+                      프리뷰가 없습니다.
                     </div>
-                  </div>
-                  <div
-                    className={`mt-3 rounded-xl p-4 shadow-sm border flex items-center justify-between ${
-                      isHighlighted("card-count-card") ? "border-[#fb923c] bg-[#fff7ed]" : "border-[#e4eaf2] bg-white"
-                    }`}
-                  >
-                    <div className={isHighlighted("card-count-info") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}>
-                      <p className="text-[12px] font-semibold text-[#0f172a]">카드 개수 표시</p>
-                      <p className="text-[11px] text-[#64748b]">보유 카드 합계</p>
-                    </div>
-                    <span className={`text-[14px] font-semibold text-[#4f46e5] ${isHighlighted("card-count-value") ? "ring-2 ring-[#fb923c]/60 rounded" : ""}`}>
-                      3장
-                    </span>
-                  </div>
-                    </>
                   )}
-                  </div>
-
-                  {/* Home Indicator */}
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[100px] h-[4px] bg-[#1a1a1a] rounded-full" />
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
             {activeTab === "FLOW" && (
               <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
-                {/* Flow Header */}
                 <div className="flex items-center gap-2 mb-8">
                   <GitBranch className="w-5 h-5 text-[#8b5cf6]" />
                   <span className="text-[16px] font-semibold text-[#0f172a]">Business Flow</span>
                 </div>
 
-                {/* Flow Steps */}
                 <div className="space-y-6">
-                  {(treeData.length === 0 ? [
-                    { title: "분석 대기", desc: "시나리오 트리 분석을 실행하세요." }
-                  ] : (selectedDetail?.flowSteps ?? [
-                    { title: "분석 대기", desc: "시나리오 트리 분석을 실행하세요." }
-                  ])).map((step, i) => (
-                    <div key={`${step.title}-${i}`} className="flex gap-4">
-                      <div className="flex flex-col items-center">
-                        <div className={`w-8 h-8 rounded-full bg-[#8b5cf6] text-white flex items-center justify-center text-[13px] font-semibold 
-                            ${isModified ? "bg-[#fb923c]" : ""}
-                          `}>
-                          {i + 1}
+                  {(flowData?.steps?.length
+                    ? flowData.steps
+                    : [{ step: 1, title: "분석 대기", description: "시나리오 트리 분석을 실행하세요.", status: "default" }]
+                  ).map((step, i, arr) => {
+                    const isStepModified =
+                      step.status === "modified" || step.status === "selected_modified"
+                    const isStepSelected =
+                      step.status === "selected" || step.status === "selected_modified"
+
+                    return (
+                      <div key={`${step.title}-${i}`} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-[13px] font-semibold ${
+                              isStepModified
+                                ? "bg-[#fb923c]"
+                                : isStepSelected
+                                ? "bg-[#8b5cf6]"
+                                : "bg-[#8b5cf6]"
+                            }`}
+                          >
+                            {step.step ?? i + 1}
+                          </div>
+                          {i < arr.length - 1 && (
+                            <div className="w-0.5 flex-1 bg-[#e4eaf2] mt-2" />
+                          )}
                         </div>
-                        {i < (selectedDetail?.flowSteps?.length ?? 1) - 1 && (
-                          <div className="w-0.5 flex-1 bg-[#e4eaf2] mt-2" />
-                        )}
+                        <div className="flex-1 pb-6">
+                          <h3
+                            className={`text-[15px] font-semibold mb-2 ${
+                              isStepModified ? "text-[#fb923c]" : "text-[#0f172a]"
+                            }`}
+                          >
+                            {step.title}
+                          </h3>
+                          <p className="text-[13px] text-[#64748b] leading-relaxed">
+                            {step.description}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 pb-6">
-                        <h3 className={`text-[15px] font-semibold text-[#0f172a] mb-2 ${isModified ? "text-[#fb923c]" : ""}`}>{step.title}</h3>
-                        <p className="text-[13px] text-[#64748b] leading-relaxed">{step.desc}</p>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
 
             {activeTab === "DIAGRAM" && (
               <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
-                {/* Diagram Header */}
                 <div className="flex items-center gap-2 mb-8">
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="2" y="2" width="6" height="4" rx="1" stroke="#8b5cf6" strokeWidth="1.5"/>
@@ -752,13 +857,10 @@ export default function WorkspaceActivePage() {
                   <span className="text-[16px] font-semibold text-[#0f172a]">시스템 아키텍쳐 다이어그램</span>
                 </div>
 
-                {/* Mermaid Diagram */}
                 <div className="flex justify-center">
-                  {treeData.length === 0 ? (
-                    <span className="text-[12px] text-[#94a3b8]">시나리오 트리 분석을 실행하세요.</span>
-                  ) : selectedDetail?.diagram ? (
+                  {diagramData?.mermaid ? (
                     <MermaidDiagram
-                      chart={selectedDetail.diagram}
+                      chart={diagramData.mermaid}
                       className="w-full flex justify-center"
                     />
                   ) : (
@@ -770,63 +872,94 @@ export default function WorkspaceActivePage() {
 
             {activeTab === "CODE" && (
               <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
-                {/* Code Header */}
                 <div className="flex items-center gap-2 mb-6">
                   <Code2 className="w-5 h-5 text-[#8b5cf6]" />
                   <span className="text-[16px] font-semibold text-[#0f172a]">Spec Overview</span>
                 </div>
 
-                {analysisMarkdown ? (
-                  <div className="space-y-4">
-                    {scenarioV1 && (
-                      <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
-                        <button
-                          className="w-full flex items-center justify-between text-left"
-                          onClick={() => setScenarioJsonOpen(prev => !prev)}
-                        >
-                          <span className="text-[12px] font-semibold text-[#0f172a]">v1.0 시나리오 (JSON)</span>
-                          <span className="text-[12px] text-[#64748b]">
-                            {scenarioJsonOpen ? "접기" : "펼치기"}
-                          </span>
-                        </button>
-                        {scenarioJsonOpen && (
-                          <pre className="mt-3 text-[12px] whitespace-pre-wrap text-[#0f172a]">
-                            {JSON.stringify(scenarioV1, null, 2)}
-                          </pre>
-                        )}
-                      </div>
+                {scenarioV1 && (
+                  <div className="bg-white border border-[#e4eaf2] rounded-xl p-5 mb-4">
+                    <button
+                      className="w-full flex items-center justify-between text-left"
+                      onClick={() => setScenarioJsonOpen((prev) => !prev)}
+                    >
+                      <span className="text-[12px] font-semibold text-[#0f172a]">v1.0 시나리오 (JSON)</span>
+                      <span className="text-[12px] text-[#64748b]">
+                        {scenarioJsonOpen ? "접기" : "펼치기"}
+                      </span>
+                    </button>
+                    {scenarioJsonOpen && (
+                      <pre className="mt-3 text-[12px] whitespace-pre-wrap text-[#0f172a]">
+                        {JSON.stringify(scenarioV1, null, 2)}
+                      </pre>
                     )}
-                    <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {analysisMarkdown}
-                      </ReactMarkdown>
+                  </div>
+                )}
+
+                <div className="bg-white border border-[#e4eaf2] rounded-xl p-5 mb-4">
+                  <button
+                    className="w-full flex items-center justify-between text-left"
+                    onClick={() => setFileTreeOpen((prev) => !prev)}
+                  >
+                    <span className="text-[12px] font-semibold text-[#0f172a]">파일 트리</span>
+                    <span className="text-[12px] text-[#64748b]">
+                      {fileTreeOpen ? "접기" : "펼치기"}
+                    </span>
+                  </button>
+                  {fileTreeOpen && (
+                    <div className="mt-3 text-[12px] text-[#0f172a]">
+                      {fileTreeMarkdown ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {fileTreeMarkdown}
+                        </ReactMarkdown>
+                      ) : (
+                        <span className="text-[12px] text-[#94a3b8]">파일 트리가 없습니다.</span>
+                      )}
                     </div>
+                  )}
+                </div>
+
+                {codeGuideData?.items?.length ? (
+                  <div className="space-y-4">
+                    {codeGuideData.items.map((item) => {
+                      const isItemModified =
+                        item.status === "modified" || item.status === "selected_modified"
+                      const borderClass = isItemModified
+                        ? "border-[#fb923c] bg-[#fff7ed]"
+                        : "border-[#e4eaf2] bg-white"
+
+                      return (
+                        <div key={item.node_id} className={`rounded-xl border p-5 ${borderClass}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="font-semibold text-sm text-slate-900">
+                              {item.file_name}
+                            </div>
+                            <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+                              {item.badge}
+                            </span>
+                          </div>
+
+                          <div className="text-xs text-slate-500 mb-2">{item.file_type}</div>
+
+                          <div className="text-sm text-slate-700 mb-3">{item.reason}</div>
+
+                          <ul className="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                            {item.guides.map((guide, idx) => (
+                              <li key={idx}>{guide}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : analysisMarkdown ? (
+                  <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {analysisMarkdown}
+                    </ReactMarkdown>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {(treeData.length === 0 ? [{
-                      name: "분석 대기",
-                      content: "// 시나리오 트리 분석을 실행하면 코드가 표시됩니다."
-                    }] : (selectedDetail?.codeFiles?.length ? selectedDetail.codeFiles : [{
-                      name: "분석 대기",
-                      content: "// 시나리오 트리 분석을 실행하면 코드가 표시됩니다."
-                    }])).map((file) => (
-                      <div key={file.name} className="bg-[#1e1e2e] rounded-xl overflow-hidden">
-                        {/* File Header */}
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d3d]">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[#a3e635]" />
-                            <span className="text-[12px] text-white font-medium">{file.name}</span>
-                          </div>
-                          <span className="text-[11px] text-[#fbbf24]">{isModified ? "Modified" : "Read"}</span>
-                        </div>
-                        {/* Code Content */}
-                        <div className="p-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-white/90">
-                          {file.content}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <span className="text-[12px] text-[#94a3b8]">코드 가이드가 없습니다.</span>
                 )}
               </div>
             )}
