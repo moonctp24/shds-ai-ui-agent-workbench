@@ -395,10 +395,10 @@ export default function WorkspaceActivePage() {
     const raw = res.data ?? {}
     const payload = raw?.result ?? raw ?? {}
 
-    const nextScenario = (payload.scenario_v1 ?? null) as ScenarioV1 | null
-    const nextFlow = (payload.flow ?? null) as FlowData | null
-    const nextDiagram = (payload.diagram ?? null) as DiagramData | null
-    const nextCodeGuide = (payload.code_guide ?? null) as CodeGuideData | null
+    const nextScenario = (raw.scenario_v1 ?? payload.scenario_v1 ?? null) as ScenarioV1 | null
+    const nextFlow = (raw.flow ?? payload.flow ?? null) as FlowData | null
+    const nextDiagram = (raw.diagram ?? payload.diagram ?? null) as DiagramData | null
+    const nextCodeGuide = (raw.code_guide ?? payload.code_guide ?? null) as CodeGuideData | null
     const nextMarkdown = (payload.markdown ?? payload.result?.markdown ?? "") as string
     const nextFileTreeMarkdown = buildFileTreeMarkdown(raw.files ?? payload.files, url)
 

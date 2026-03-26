@@ -9,6 +9,7 @@ TEXT_EXTENSIONS = (".tsx", ".jsx", ".ts", ".js")
 MAX_READ_CHARS = 50000
 MAX_COMPONENT_DEPTH = 4
 MAX_CHILD_COMPONENTS_PER_FILE = 30
+BUILD_ID = "scenario-desc-v2"
 
 
 # =========================
@@ -303,14 +304,126 @@ def _classify_section(component_name: str, text: str, html_tags: set[str]) -> st
 
     return "body"
 
+def preview_node(state: dict) -> dict:
+    scenario = state.get("scenario_v1", {})
+    nodes = scenario.get("nodes", [])
+
+    html_blocks = []
+
+    def walk(nodes):
+        for n in nodes:
+            title = n.get("title", "")
+            html_blocks.append(f"""
+<div style="border:1px solid #e5e7eb; padding:12px;">
+  <div style="font-weight:600;">{title}</div>
+</div>
+""")
+            if n.get("children"):
+                walk(n["children"])
+
+    walk(nodes)
+
+    return {
+        "preview": {
+            "html": "\n".join(html_blocks)
+        }
+    }
 
 def _make_description(label: str, component_name: str, keywords: list[str], source_file: str) -> str:
-    keyword_text = ", ".join(keywords[:5]) if keywords else "특정 키워드 없음"
-    return (
-        f"{label}은(는) 화면에서 독립적으로 렌더링 가능한 최소 UI 단위입니다. "
-        f"주요 컴포넌트는 {component_name}이며, 분석 근거 키워드는 [{keyword_text}] 입니다. "
-        f"관련 소스는 {source_file} 입니다."
-    )
+    print("### NEW _make_description called ###", label, keywords)
+    """
+    개발자 관점 설명이 아니라 사용자 관점의 요구사항 문장으로 생성한다.
+    반환값은 줄바꿈 포함 문자열이며, 프론트에서 그대로 표시하면 된다.
+    """
+    lines: list[str] = []
+
+    if "card" in keywords or "summary" in keywords:
+        lines.extend([
+            "1. 사용자는 상품 카드 리스트에서 특정 카드를 클릭하면 카드 상세페이지로 이동할 수 있어야 한다.",
+            "2. 상세페이지 진입 시 카드 ID를 기반으로 카드 기본 정보(이름, 이미지, 혜택 요약)를 조회해야 한다.",
+            "3. 카드 혜택은 카테고리별(쇼핑, 교통, 외식 등)로 구분하여 표시되어야 한다.",
+            "4. 각 혜택 항목은 할인율, 한도, 적용 조건을 포함하여 사용자에게 명확히 전달되어야 한다.",
+            "5. 카드 이용 조건(전월 실적, 제외 항목 등)은 별도의 영역에서 상세히 확인할 수 있어야 한다.",
+            "6. 사용자는 카드 신청 버튼을 통해 신청 페이지로 이동할 수 있어야 한다.",
+            "7. 로그인하지 않은 사용자가 신청 버튼을 클릭할 경우 로그인 페이지로 리다이렉트되어야 한다.",
+            "8. 상세페이지는 모바일/태블릿/PC 환경에서 반응형으로 정상 동작해야 한다.",
+            "9. 카드 정보 조회 실패 시 사용자에게 오류 메시지를 표시하고 재시도 기능을 제공해야 한다.",
+            "10. 상세페이지 로딩 시간은 2초 이내로 유지되도록 API 응답 및 렌더링 성능을 최적화해야 한다.",
+        ])
+
+    elif "search" in keywords or "filter" in keywords:
+        lines.extend([
+            "1. 사용자는 원하는 조건을 입력하여 필요한 정보를 빠르게 찾을 수 있어야 한다.",
+            "2. 검색 조건이나 필터는 직관적으로 이해되고 쉽게 변경할 수 있어야 한다.",
+            "3. 조건 변경 시 결과 영역은 최신 조건에 맞게 즉시 갱신되어야 한다.",
+            "4. 검색 결과가 없을 경우 사용자에게 빈 결과 상태를 명확히 안내해야 한다.",
+            "5. 검색 및 필터 기능은 모바일, 태블릿, PC 환경에서 동일한 사용성을 제공해야 한다.",
+        ])
+
+    elif "list" in keywords or "table" in keywords:
+        lines.extend([
+            "1. 사용자는 목록에서 여러 항목을 한눈에 확인할 수 있어야 한다.",
+            "2. 각 항목의 핵심 정보는 사용자가 빠르게 비교할 수 있도록 정리되어야 한다.",
+            "3. 목록의 각 항목은 클릭 또는 선택을 통해 상세 화면으로 연결될 수 있어야 한다.",
+            "4. 데이터가 없는 경우 빈 상태 메시지를 제공해야 한다.",
+            "5. 목록 로딩 중에는 사용자에게 적절한 로딩 상태를 표시해야 한다.",
+        ])
+
+    elif "detail" in keywords or "info" in keywords:
+        lines.extend([
+            "1. 사용자는 선택한 항목의 상세 정보를 한 화면에서 명확하게 확인할 수 있어야 한다.",
+            "2. 핵심 정보와 부가 정보는 구분된 영역으로 제공되어야 한다.",
+            "3. 사용자는 상세 정보 화면에서 다음 행동으로 자연스럽게 이동할 수 있어야 한다.",
+            "4. 상세 정보 조회 실패 시 오류 메시지와 재시도 기능을 제공해야 한다.",
+            "5. 상세 화면은 다양한 디바이스 환경에서 안정적으로 동작해야 한다.",
+        ])
+
+    elif "button" in keywords or "action" in keywords:
+        lines.extend([
+            "1. 사용자는 주요 액션 버튼을 쉽게 인지하고 클릭할 수 있어야 한다.",
+            "2. 버튼 클릭 시 기대한 동작이 즉시 실행되어야 한다.",
+            "3. 버튼이 비활성 상태인 경우 그 이유를 사용자가 이해할 수 있어야 한다.",
+            "4. 잘못된 입력이나 권한 부족 상황에서는 적절한 안내가 제공되어야 한다.",
+            "5. 주요 액션은 모바일, 태블릿, PC 환경에서 일관된 방식으로 동작해야 한다.",
+        ])
+
+    elif "modal" in keywords or "popup" in keywords or "dialog" in keywords:
+        lines.extend([
+            "1. 사용자는 중요한 확인이나 추가 정보를 팝업 형태로 확인할 수 있어야 한다.",
+            "2. 팝업에는 현재 맥락에 필요한 정보만 명확하게 제공되어야 한다.",
+            "3. 사용자는 확인 또는 취소를 쉽게 선택할 수 있어야 한다.",
+            "4. 팝업 외부를 클릭하거나 닫기 버튼을 통해 창을 종료할 수 있어야 한다.",
+            "5. 팝업 동작은 다양한 화면 크기에서도 사용성이 유지되어야 한다.",
+        ])
+
+    elif "header" in keywords or "nav" in keywords:
+        lines.extend([
+            "1. 사용자는 상단 네비게이션을 통해 주요 메뉴로 빠르게 이동할 수 있어야 한다.",
+            "2. 현재 위치한 메뉴나 화면 상태가 직관적으로 표시되어야 한다.",
+            "3. 주요 진입 버튼과 메뉴는 쉽게 식별 가능해야 한다.",
+            "4. 상단 영역은 화면 크기에 따라 자연스럽게 재배치되어야 한다.",
+            "5. 네비게이션 동작은 일관되고 예측 가능해야 한다.",
+        ])
+
+    elif "footer" in keywords:
+        lines.extend([
+            "1. 사용자는 화면 하단에서 부가 정보와 추가 링크를 확인할 수 있어야 한다.",
+            "2. 하단 영역은 본문과 명확히 구분되어야 한다.",
+            "3. 공지, 고객지원, 약관 등 보조 정보는 쉽게 접근 가능해야 한다.",
+            "4. 하단 링크는 모든 디바이스 환경에서 정상 동작해야 한다.",
+            "5. 하단 정보는 화면 전체 흐름을 방해하지 않도록 간결하게 제공되어야 한다.",
+        ])
+
+    else:
+        lines.extend([
+            f"1. 사용자는 {label}에서 필요한 정보를 직관적으로 확인할 수 있어야 한다.",
+            f"2. 사용자는 {label}와 상호작용하여 다음 단계로 자연스럽게 이동할 수 있어야 한다.",
+            f"3. {label}의 주요 정보는 명확하고 이해하기 쉽게 제공되어야 한다.",
+            f"4. {label}은(는) 모바일, 태블릿, PC 환경에서 안정적으로 동작해야 한다.",
+            f"5. {label}에서 오류가 발생할 경우 사용자에게 적절한 안내와 재시도 수단을 제공해야 한다.",
+        ])
+
+    return "\n".join(lines)
 
 
 def _make_flow_hint(label: str, keywords: list[str]) -> str:
@@ -571,6 +684,41 @@ def _build_grouped_nodes(project_name: str, leaves: list[dict[str, Any]]) -> lis
     ]
 
 
+def _apply_description_rules(nodes: list[dict[str, Any]]) -> None:
+    """
+    leaf 노드의 description을 규칙 기반 문장으로 보정한다.
+    """
+    for root in nodes:
+        for section in root.get("children", []) or []:
+            for leaf in section.get("children", []) or []:
+                title = leaf.get("title", "")
+                label = title.split(". ", 1)[1].strip() if ". " in title else title.strip()
+                evidence = leaf.get("evidence", {}) or {}
+                keywords = evidence.get("keywords", []) or []
+                leaf["description"] = _make_description(
+                    label=label or "UI 모듈",
+                    component_name=leaf.get("component_name", ""),
+                    keywords=keywords,
+                    source_file=leaf.get("source_file", ""),
+                )
+
+
+def _force_description_overwrite(nodes: list[dict[str, Any]]) -> None:
+    for root in nodes:
+        for section in root.get("children", []) or []:
+            for leaf in section.get("children", []) or []:
+                title = leaf.get("title", "")
+                label = title.split(". ", 1)[1].strip() if ". " in title else title.strip()
+                evidence = leaf.get("evidence", {}) or {}
+                keywords = evidence.get("keywords") or leaf.get("keywords") or []
+                leaf["description"] = _make_description(
+                    label=label or "UI 모듈",
+                    component_name=leaf.get("component_name", ""),
+                    keywords=keywords,
+                    source_file=leaf.get("source_file", ""),
+                )
+
+
 # =========================
 # summary / pipeline input
 # =========================
@@ -630,6 +778,7 @@ def _build_pipeline_inputs(nodes: list[dict[str, Any]]) -> dict[str, Any]:
 # =========================
 
 def scenario_v1_node(state: dict) -> dict:
+    print("### scenario_v1_node entered ###", flush=True)
     root_dir = state.get("local_repo_path", "")
 
     if not root_dir or not os.path.isdir(root_dir):
@@ -666,11 +815,13 @@ def scenario_v1_node(state: dict) -> dict:
                 ],
             }
         ]
+        _force_description_overwrite(fallback_nodes)
         pipeline_inputs = _build_pipeline_inputs(fallback_nodes)
         return {
             "scenario_v1": {
                 "project_name": "auto-generated-project",
                 "version": "v1.0",
+                "debug_build_id": BUILD_ID,
                 "summary": {
                     "entry_pages": [],
                     "analyzed_files": [],
@@ -738,12 +889,15 @@ def scenario_v1_node(state: dict) -> dict:
     leaves = _merge_leaf_candidates(leaves)
     project_name = _guess_project_name(root_dir)
     nodes = _build_grouped_nodes(project_name, leaves)
+    _apply_description_rules(nodes)
+    _force_description_overwrite(nodes)
     summary = _build_summary(root_dir, page_paths, leaves)
     pipeline_inputs = _build_pipeline_inputs(nodes)
 
     scenario_v1 = {
         "project_name": project_name,
         "version": "v1.0",
+        "debug_build_id": BUILD_ID,
         "summary": summary,
         "nodes": nodes,
         **pipeline_inputs,
