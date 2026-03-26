@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Check,
   Maximize2,
@@ -146,6 +146,8 @@ export default function WorkspaceActivePage() {
   const [flowData, setFlowData] = useState<FlowData | null>(null)
   const [diagramData, setDiagramData] = useState<DiagramData | null>(null)
   const [codeGuideData, setCodeGuideData] = useState<CodeGuideData | null>(null)
+  const [previewData, setPreviewData] = useState<any | null>(null)
+  const previewFrameRef = useRef<HTMLIFrameElement | null>(null)
 
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "CODE"]
 
@@ -244,6 +246,11 @@ export default function WorkspaceActivePage() {
       setModifiedScenario(scenarioDoc)
     }
   }, [nodeDetails, selectedItem, selectedLabel, modifiedNodes, scenarioV1])
+
+  useEffect(() => {
+    if (!previewFrameRef.current || !selectedItem) return
+    previewFrameRef.current.contentWindow?.postMessage({ selectedNodeId: selectedItem }, "*")
+  }, [selectedItem, previewData?.html])
 
   const collectExpandedIds = (items: TreeItem[]) => {
     const ids: string[] = []
@@ -401,13 +408,14 @@ export default function WorkspaceActivePage() {
     const nextCodeGuide = (raw.code_guide ?? payload.code_guide ?? null) as CodeGuideData | null
     const nextMarkdown = (payload.markdown ?? payload.result?.markdown ?? "") as string
     const nextFileTreeMarkdown = buildFileTreeMarkdown(raw.files ?? payload.files, url)
-
+    const nextPreview = (payload.preview ?? null)
     setScenarioV1(nextScenario)
     setFlowData(nextFlow)
     setDiagramData(nextDiagram)
     setCodeGuideData(nextCodeGuide)
     setAnalysisMarkdown(nextMarkdown)
     setFileTreeMarkdown(nextFileTreeMarkdown)
+    setPreviewData(nextPreview)
 
     if (nextScenario) {
       const scenarioTree = buildTreeFromScenario(nextScenario)
@@ -443,7 +451,7 @@ export default function WorkspaceActivePage() {
       setProjectVersion("-")
     }
 
-    setActiveTab("FLOW")
+    setActiveTab("PREVIEW")
   } catch (e: any) {
     const isNetworkError = Boolean(e?.request) && !e?.response
     if (isNetworkError) {
@@ -755,48 +763,33 @@ export default function WorkspaceActivePage() {
 
           {/* Right Content - Tab Content */}
           <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
-            {activeTab === "PREVIEW" && (
-              /* iPhone Frame */
-              <div className={`w-[453px] h-[877px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl ${isHighlighted("preview-device") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                <div className={`w-full h-full bg-[#f5f5f5] rounded-[32px] relative overflow-hidden ${isHighlighted("preview-screen") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                  {/* Notch */}
-                  <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-[#1a1a1a] rounded-b-2xl ${isHighlighted("preview-notch") ? "ring-2 ring-[#fb923c]" : ""}`} />
-                  
-                  {/* Screen Content */}
-                  <div className={`w-full h-full overflow-y-auto px-5 pt-10 pb-6 ${isHighlighted("preview-content") ? "ring-2 ring-[#fb923c]" : ""}`}>
-                  {treeData.length === 0 ? (
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-[13px] text-[#94a3b8]">프리뷰 준비 완료</p>
-                        <p className="text-[11px] text-[#cbd5f5] mt-2">시나리오 트리 분석을 실행하세요</p>
-                      </div>
-                    </div>
+          {activeTab === "PREVIEW" && (
+            <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
+              <div className="flex justify-center">
+                <div className="w-[453px] min-h-[877px] bg-white rounded-[32px] border border-[#e4eaf2] overflow-hidden">
+                  {previewData?.html ? (
+                    <iframe
+                      title="preview"
+                      className="w-full h-[877px] bg-white"
+                      ref={previewFrameRef}
+                      srcDoc={previewData.html}
+                      onLoad={() => {
+                        if (!selectedItem) return
+                        previewFrameRef.current?.contentWindow?.postMessage(
+                          { selectedNodeId: selectedItem },
+                          "*"
+                        )
+                      }}
+                    />
                   ) : (
-                    <>
-                  <div
-                    className={`mb-4 rounded-xl bg-white p-4 shadow-sm ${isHighlighted("preview-spec") ? "ring-2 ring-[#fb923c]" : ""}`}
-                  >
-                    <h3 className="text-[14px] font-semibold text-[#0f172a] mb-2">
-                      {selectedDetail?.title ?? selectedLabel ?? "Preview"}
-                    </h3>
-                    <p className="text-[12px] text-[#64748b] leading-relaxed">
-                      {selectedDetail?.doc ?? "선택한 요소의 상세 정보가 아직 없습니다."}
-                    </p>
-                  </div>
-                  <div className="mt-4 rounded-xl border border-[#e4eaf2] bg-white p-4 shadow-sm">
-                    <p className="text-[12px] text-[#64748b]">
-                      분석 결과 기반 프리뷰가 준비되면 이 영역에 표시됩니다.
-                    </p>
-                  </div>
-                    </>
+                    <div className="h-[877px] flex items-center justify-center text-[12px] text-[#94a3b8]">
+                      프리뷰가 없습니다.
+                    </div>
                   )}
-                  </div>
-
-                  {/* Home Indicator */}
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-[100px] h-[4px] bg-[#1a1a1a] rounded-full" />
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
             {activeTab === "FLOW" && (
               <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
