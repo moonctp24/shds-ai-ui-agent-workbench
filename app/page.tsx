@@ -128,19 +128,18 @@ export default function WorkspacePage() {
   const [modifyError, setModifyError] = useState<string | null>(null)
   const [modifyResult, setModifyResult] = useState<ModifyResult | null>(null)
 
-  const [rightTab, setRightTab] = useState<"CODE" | "DIFF" | "FLOW" | "DIAGRAM">("CODE")
+  const [rightTab, setRightTab] = useState<"CODE" | "DIFF" | "FLOW" | "DIAGRAM">("FLOW")
   const [checkedDescriptions, setCheckedDescriptions] = useState<Record<string, boolean>>({})
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>(INITIAL_STEPS)
 
   const [flow, setFlow] = useState<Flow | null>(null)
   const [diagram, setDiagram] = useState<string | null>(null)
 
-  // 영역/컴포넌트 선택 변경 시 수정 결과 및 체크박스 초기화
+  // 영역/컴포넌트 선택 변경 시 수정 결과 및 체크박스 초기화 (탭은 유지)
   useEffect(() => {
     setModifyResult(null)
     setModifyError(null)
     setModificationRequest("")
-    setRightTab("CODE")
     setCheckedDescriptions({})
   }, [selection])
 
@@ -170,6 +169,7 @@ export default function WorkspacePage() {
     setFlow(null)
     setDiagram(null)
     setProgressSteps(INITIAL_STEPS)
+    setRightTab("FLOW")
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -309,6 +309,7 @@ export default function WorkspacePage() {
           onClick={() => {
             if (isExpandable) toggleComponent(comp.id)
             setSelection({ type: "component", data: comp })
+            setRightTab("CODE")
           }}
           style={{ paddingLeft: `${16 + indentPx}px` }}
           className={`flex items-center gap-2 py-2.5 pr-4 cursor-pointer transition-colors ${
@@ -345,7 +346,10 @@ export default function WorkspacePage() {
               return (
                 <div
                   key={area.id}
-                  onClick={() => setSelection({ type: "area", data: area, parentComponent: comp })}
+                  onClick={() => {
+                    setSelection({ type: "area", data: area, parentComponent: comp })
+                    setRightTab("CODE")
+                  }}
                   style={{ paddingLeft: `${40 + indentPx}px` }}
                   className={`flex items-center gap-2 pr-4 py-2 cursor-pointer transition-colors ${
                     isAreaSelected
@@ -549,32 +553,6 @@ export default function WorkspacePage() {
         {/* 탭 헤더 */}
         <div className="flex items-center gap-1 px-5 py-3 border-b border-[#e4eaf2] bg-white">
           <button
-            onClick={() => setRightTab("CODE")}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors ${
-              rightTab === "CODE"
-                ? "bg-[#0f172a] text-white"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            CODE
-          </button>
-          <button
-            onClick={() => setRightTab("DIFF")}
-            disabled={!modifyResult}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              rightTab === "DIFF"
-                ? "bg-[#0f172a] text-white"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
-          >
-            <Diff className="w-3.5 h-3.5" />
-            DIFF
-            {modifyResult && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-            )}
-          </button>
-          <button
             onClick={() => setRightTab("FLOW")}
             disabled={!flow}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
@@ -599,6 +577,32 @@ export default function WorkspacePage() {
             <Share2 className="w-3.5 h-3.5" />
             DIAGRAM
             {diagram && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+          </button>
+          <button
+            onClick={() => setRightTab("CODE")}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors ${
+              rightTab === "CODE"
+                ? "bg-[#0f172a] text-white"
+                : "text-[#64748b] hover:text-[#0f172a]"
+            }`}
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            CODE
+          </button>
+          <button
+            onClick={() => setRightTab("DIFF")}
+            disabled={!modifyResult}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              rightTab === "DIFF"
+                ? "bg-[#0f172a] text-white"
+                : "text-[#64748b] hover:text-[#0f172a]"
+            }`}
+          >
+            <Diff className="w-3.5 h-3.5" />
+            DIFF
+            {modifyResult && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+            )}
           </button>
 
           {selection?.type === "area" && (
