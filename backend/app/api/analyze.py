@@ -11,19 +11,23 @@ from backend.app.graph.analyze_graph.builder import build_analyze_graph
 router = APIRouter()
 
 STEPS = [
-    ("repo_load",     "GitHub 레포지토리 클론"),
-    ("file_scan",     "파일 목록 수집"),
-    ("code_read",     "소스 코드 읽기"),
-    ("analyze_code",  "AI 컴포넌트 구조 분석"),
-    ("encode_nl",     "AI 자연어 설명 생성"),
+    ("repo_load",       "GitHub 레포지토리 클론"),
+    ("file_scan",       "파일 목록 수집"),
+    ("code_read",       "소스 코드 읽기"),
+    ("analyze_code",    "AI 컴포넌트 구조 분석"),
+    ("encode_nl",       "AI 자연어 설명 생성"),
+    ("encode_flow",     "AI 사용자 플로우 생성"),
+    ("encode_diagram",  "AI 다이어그램 생성"),
 ]
 
 RUNNING_MESSAGES = {
-    "repo_load":    "GitHub 레포지토리를 클론하는 중...",
-    "file_scan":    "파일 목록을 수집하는 중...",
-    "code_read":    "Vue / React 소스 코드를 읽는 중...",
-    "analyze_code": "AI가 컴포넌트 구조를 분석하는 중... (LLM 호출 중, 잠시만 기다려 주세요)",
-    "encode_nl":    "AI가 자연어 설명을 생성하는 중...",
+    "repo_load":      "GitHub 레포지토리를 클론하는 중...",
+    "file_scan":      "파일 목록을 수집하는 중...",
+    "code_read":      "Vue / React 소스 코드를 읽는 중...",
+    "analyze_code":   "AI가 컴포넌트 구조를 분석하는 중... (LLM 호출 중, 잠시만 기다려 주세요)",
+    "encode_nl":      "AI가 자연어 설명을 생성하는 중...",
+    "encode_flow":    "AI가 사용자 플로우를 생성하는 중...",
+    "encode_diagram": "AI가 Mermaid 다이어그램을 생성하는 중...",
 }
 
 STEP_INDEX = {name: i for i, (name, _) in enumerate(STEPS)}
@@ -61,6 +65,8 @@ def analyze_repo(payload: AnalyzeRepoRequest):
             })
 
             final_hierarchy: dict = {}
+            final_flow: dict = {}
+            final_diagram: str = ""
 
             for event in graph.stream({
                 "repo_url": payload.repo_url,
@@ -79,9 +85,13 @@ def analyze_repo(payload: AnalyzeRepoRequest):
                         "message": f"{label} 완료",
                     })
 
-                    # hierarchy 누적
-                    if isinstance(state_update, dict) and "hierarchy" in state_update:
-                        final_hierarchy = state_update["hierarchy"]
+                    if isinstance(state_update, dict):
+                        if "hierarchy" in state_update:
+                            final_hierarchy = state_update["hierarchy"]
+                        if "flow" in state_update:
+                            final_flow = state_update["flow"]
+                        if "diagram" in state_update:
+                            final_diagram = state_update["diagram"]
 
                     # 다음 노드 시작 알림
                     next_idx = STEP_INDEX[node_name] + 1
@@ -95,7 +105,8 @@ def analyze_repo(payload: AnalyzeRepoRequest):
                         })
 
             # 최종 결과 전송
-            yield _sse({"type": "result", "data": final_hierarchy})
+            result_data = {**final_hierarchy, "flow": final_flow, "diagram": final_diagram}
+            yield _sse({"type": "result", "data": result_data})
 
         except Exception as exc:
             yield _sse({"type": "error", "message": str(exc)})

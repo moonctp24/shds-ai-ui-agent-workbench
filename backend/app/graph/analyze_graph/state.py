@@ -43,5 +43,18 @@ class AnalyzeState(TypedDict, total=False):
     # encode_nl 출력 (LLM) — hierarchy에 description 필드 추가된 버전
     # hierarchy가 그대로 업데이트됨
 
+    # encode_flow 출력 (LLM)
+    flow: Dict[str, Any]
+    # {
+    #   "title": "사용자 플로우",
+    #   "steps": [
+    #     { "step": 1, "component": "헤더", "area": "검색 영역",
+    #       "action": "...", "result": "..." }
+    #   ]
+    # }
+
+    # encode_diagram 출력 (LLM) — Mermaid 다이어그램 텍스트
+    diagram: str
+
     # 에러
     errors: List[str]
