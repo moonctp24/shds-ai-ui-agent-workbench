@@ -22,9 +22,11 @@ class ModifyState(TypedDict, total=False):
 
     # decode_flow 출력 (LLM)
     modified_flow: Dict[str, Any]
+    flow_changed_steps: List[int]       # 변경된 step 번호 목록 (1-indexed)
 
     # decode_diagram 출력 (LLM)
     modified_diagram: str
+    diagram_changed_nodes: List[str]    # 변경된 Mermaid 노드 ID 목록
 
     # 에러
     errors: List[str]

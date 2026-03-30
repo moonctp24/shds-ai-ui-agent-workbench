@@ -61,7 +61,9 @@ def modify_code(payload: ModifyCodeRequest) -> dict:
             "modified_code": result.get("modified_code", payload.original_code),
             "diff": result.get("diff", ""),
             "modified_flow": result.get("modified_flow"),
+            "flow_changed_steps": result.get("flow_changed_steps", []),
             "modified_diagram": result.get("modified_diagram"),
+            "diagram_changed_nodes": result.get("diagram_changed_nodes", []),
         }
 
     except Exception as exc:

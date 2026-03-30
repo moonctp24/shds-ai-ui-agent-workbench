@@ -86,7 +86,9 @@ type ModifyResult = {
   modified_code: string
   diff: string
   modified_flow?: Flow
+  flow_changed_steps?: number[]
   modified_diagram?: string
+  diagram_changed_nodes?: string[]
 }
 
 type SelectionTarget =
@@ -134,6 +136,8 @@ export default function WorkspacePage() {
 
   const [flow, setFlow] = useState<Flow | null>(null)
   const [diagram, setDiagram] = useState<string | null>(null)
+  const [flowChangedSteps, setFlowChangedSteps] = useState<number[]>([])
+  const [diagramChangedNodes, setDiagramChangedNodes] = useState<string[]>([])
 
   // 영역/컴포넌트 선택 변경 시 수정 결과 및 체크박스 초기화 (탭은 유지)
   useEffect(() => {
@@ -168,6 +172,8 @@ export default function WorkspacePage() {
     setModifyResult(null)
     setFlow(null)
     setDiagram(null)
+    setFlowChangedSteps([])
+    setDiagramChangedNodes([])
     setProgressSteps(INITIAL_STEPS)
     setRightTab("FLOW")
 
@@ -257,8 +263,18 @@ export default function WorkspacePage() {
         original_diagram: diagram ?? undefined,
       })
       setModifyResult(res.data)
-      if (res.data.modified_flow) setFlow(res.data.modified_flow)
-      if (res.data.modified_diagram) setDiagram(res.data.modified_diagram)
+      if (res.data.modified_flow) {
+        setFlow(res.data.modified_flow)
+        setFlowChangedSteps(res.data.flow_changed_steps ?? [])
+      } else {
+        setFlowChangedSteps([])
+      }
+      if (res.data.modified_diagram) {
+        setDiagram(res.data.modified_diagram)
+        setDiagramChangedNodes(res.data.diagram_changed_nodes ?? [])
+      } else {
+        setDiagramChangedNodes([])
+      }
       setRightTab("DIFF")
     } catch (e: any) {
       const msg =
@@ -563,7 +579,9 @@ export default function WorkspacePage() {
           >
             <GitMerge className="w-3.5 h-3.5" />
             FLOW
-            {flow && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+            {flow && (
+              <span className={`w-1.5 h-1.5 rounded-full ${flowChangedSteps.length > 0 ? "bg-amber-400" : "bg-emerald-400"}`} />
+            )}
           </button>
           <button
             onClick={() => setRightTab("DIAGRAM")}
@@ -576,7 +594,9 @@ export default function WorkspacePage() {
           >
             <Share2 className="w-3.5 h-3.5" />
             DIAGRAM
-            {diagram && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+            {diagram && (
+              <span className={`w-1.5 h-1.5 rounded-full ${diagramChangedNodes.length > 0 ? "bg-amber-400" : "bg-blue-400"}`} />
+            )}
           </button>
           <button
             onClick={() => setRightTab("CODE")}
@@ -756,32 +776,48 @@ export default function WorkspacePage() {
                     <h2 className="text-[14px] font-semibold text-[#0f172a]">{flow.title}</h2>
                     <span className="ml-auto text-[11px] text-[#94a3b8]">{flow.steps.length}단계</span>
                   </div>
+                  {flowChangedSteps.length > 0 && (
+                    <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                      <span className="text-[11px] text-amber-700 font-medium">
+                        {flowChangedSteps.length}개 단계 수정됨 (step {flowChangedSteps.join(", ")})
+                      </span>
+                    </div>
+                  )}
                   <ol className="relative border-l-2 border-[#e4eaf2] ml-3 space-y-0">
-                    {flow.steps.map((step) => (
-                      <li key={step.step} className="ml-6 pb-6 last:pb-0">
-                        {/* 타임라인 노드 */}
-                        <span className="absolute -left-[13px] flex items-center justify-center w-6 h-6 rounded-full bg-[#8b5cf6] ring-4 ring-white text-white text-[10px] font-bold">
-                          {step.step}
-                        </span>
-                        <div className="bg-white border border-[#e4eaf2] rounded-xl p-4 shadow-sm">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[10px] font-semibold text-[#8b5cf6] bg-[#8b5cf6]/10 px-2 py-0.5 rounded-full">
-                              {step.component}
-                            </span>
-                            <span className="text-[10px] text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
-                              {step.area}
-                            </span>
+                    {flow.steps.map((step) => {
+                      const isChanged = flowChangedSteps.includes(step.step)
+                      return (
+                        <li key={step.step} className="ml-6 pb-6 last:pb-0">
+                          {/* 타임라인 노드 */}
+                          <span className={`absolute -left-[13px] flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white text-white text-[10px] font-bold ${isChanged ? "bg-amber-500" : "bg-[#8b5cf6]"}`}>
+                            {step.step}
+                          </span>
+                          <div className={`border rounded-xl p-4 shadow-sm ${isChanged ? "bg-amber-50 border-amber-300" : "bg-white border-[#e4eaf2]"}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isChanged ? "text-amber-700 bg-amber-100" : "text-[#8b5cf6] bg-[#8b5cf6]/10"}`}>
+                                {step.component}
+                              </span>
+                              <span className="text-[10px] text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
+                                {step.area}
+                              </span>
+                              {isChanged && (
+                                <span className="ml-auto text-[10px] text-amber-600 font-semibold bg-amber-100 px-2 py-0.5 rounded-full">
+                                  ✦ 수정됨
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[12px] text-[#0f172a] font-medium mb-1">
+                              {step.action}
+                            </p>
+                            <p className="text-[11px] text-[#64748b] flex items-start gap-1.5">
+                              <span className={`mt-0.5 w-3.5 h-3.5 rounded-full shrink-0 flex items-center justify-center text-[8px] font-bold ${isChanged ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"}`}>→</span>
+                              {step.result}
+                            </p>
                           </div>
-                          <p className="text-[12px] text-[#0f172a] font-medium mb-1">
-                            {step.action}
-                          </p>
-                          <p className="text-[11px] text-[#64748b] flex items-start gap-1.5">
-                            <span className="mt-0.5 w-3.5 h-3.5 rounded-full bg-emerald-100 flex-shrink-0 flex items-center justify-center text-emerald-600 text-[8px] font-bold">→</span>
-                            {step.result}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
+                        </li>
+                      )
+                    })}
                   </ol>
                 </>
               ) : (
@@ -801,6 +837,12 @@ export default function WorkspacePage() {
                   <div className="flex items-center gap-2 mb-4">
                     <Share2 className="w-4 h-4 text-[#3b82f6]" />
                     <h2 className="text-[14px] font-semibold text-[#0f172a]">컴포넌트 구조 다이어그램</h2>
+                    {diagramChangedNodes.length > 0 && (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        {diagramChangedNodes.length}개 노드 수정됨
+                      </span>
+                    )}
                     {hierarchy?.repository && (
                       <span className="ml-auto text-[11px] text-[#94a3b8] font-mono">{hierarchy.repository}</span>
                     )}
