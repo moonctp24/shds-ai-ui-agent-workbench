@@ -31,7 +31,7 @@ def _parse_nodes(diagram: str) -> Dict[str, str]:
     """Mermaid 다이어그램에서 node_id -> label 매핑을 추출한다."""
     nodes: Dict[str, str] = {}
     # comp1["헤더"], area1("로고"), node{조건} 등 다양한 Mermaid 노드 표기 지원
-    pattern = re.compile(r'(\w+)\s*[\[({<]+["\']?([^"\'\]\)}>]+)["\']?[\])}>')
+    pattern = re.compile(r'(\w+)\s*[\[({<]+["\']?([^"\'\]\)}>]+)["\']?[\])}>]')
     for match in pattern.finditer(diagram):
         node_id, label = match.group(1).strip(), match.group(2).strip()
         # flowchart, classDef, class 등 키워드 제외
