@@ -35,7 +35,12 @@ app
 - back서버: python기동
 
 ```bash
+yarn install
 yarn dev
 ```
+```bash
+pip install -r backend/requirements.txt
 python -m uvicorn backend.main:app --reload --port 8000
+```
+render에 등록할 때: python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
