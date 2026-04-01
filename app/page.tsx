@@ -14,6 +14,7 @@ import {
   Share2,
   Plus,
   Trash2,
+  Monitor,
 } from "lucide-react"
 import { api } from "@/lib/api"
 import analysisData from "@/lib/shcard_demo_analysis.json"
@@ -149,7 +150,7 @@ export default function WorkspacePage() {
   const [modifyError, setModifyError] = useState<string | null>(null)
   const [modifyResult, setModifyResult] = useState<ModifyResult | null>(null)
 
-  const [rightTab, setRightTab] = useState<"CODE" | "DIFF" | "FLOW" | "DIAGRAM">("FLOW")
+  const [rightTab, setRightTab] = useState<"PREVIEW" | "FLOW" | "DIAGRAM" | "CODE" | "DIFF">("PREVIEW")
   const [checkedDescriptions, setCheckedDescriptions] = useState<Record<string, boolean>>({})
   // 체크된 항목의 편집된 텍스트 (key: `${id}-${idx}`, value: 편집 중인 텍스트)
   const [editedDescriptions, setEditedDescriptions] = useState<Record<string, string>>({})
@@ -252,6 +253,119 @@ export default function WorkspacePage() {
     if (selection?.type !== "area") return ""
     return modifyResult ? modifyResult.original_code : selection.data.code
   }, [selection, modifyResult])
+
+  // ─── PREVIEW 와이어프레임 헬퍼 ──────────────────────────────────────────────
+
+  const getAreaType = (area: Area): "button" | "banner" | "nav" | "input" | "list" | "card" | "default" => {
+    const text = `${area.name} ${(area.description ?? []).join(" ")}`.toLowerCase()
+    if (/버튼|button|cta|클릭|링크/.test(text)) return "button"
+    if (/배너|banner|이미지|image|사진|슬라이드|썸네일/.test(text)) return "banner"
+    if (/내비|네비|nav|메뉴|menu|gnb|lnb|탭|tab/.test(text)) return "nav"
+    if (/입력|input|검색|search|폼|form|텍스트박스/.test(text)) return "input"
+    if (/목록|리스트|list|아이템|피드|항목/.test(text)) return "list"
+    if (/카드|card/.test(text)) return "card"
+    return "default"
+  }
+
+  const AREA_STYLE_MAP = {
+    button:  { bg: "bg-[#eff6ff]", border: "border-[#93c5fd]", tag: "BTN",   tagCls: "bg-[#2563eb]" },
+    banner:  { bg: "bg-[#fff7ed]", border: "border-[#fdba74]", tag: "IMG",   tagCls: "bg-[#ea580c]" },
+    nav:     { bg: "bg-[#f0fdf4]", border: "border-[#86efac]", tag: "NAV",   tagCls: "bg-[#16a34a]" },
+    input:   { bg: "bg-[#fefce8]", border: "border-[#fde047]", tag: "INPUT", tagCls: "bg-[#ca8a04]" },
+    list:    { bg: "bg-[#fafafa]", border: "border-[#d4d4d8]", tag: "LIST",  tagCls: "bg-[#52525b]" },
+    card:    { bg: "bg-[#f0f9ff]", border: "border-[#7dd3fc]", tag: "CARD",  tagCls: "bg-[#0284c7]" },
+    default: { bg: "bg-[#f8fafc]", border: "border-[#94a3b8]", tag: "UI",   tagCls: "bg-[#475569]" },
+  } as const
+
+  const renderWireframeArea = (area: Area, isOnDark: boolean): React.ReactNode => {
+    const type = getAreaType(area)
+    const s = AREA_STYLE_MAP[type]
+    const isBanner = type === "banner"
+    const isButton = type === "button"
+
+    const sharedTag = (
+      <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded ${s.tagCls} text-white`}>
+        {s.tag}
+      </span>
+    )
+
+    if (isOnDark) {
+      return (
+        <div
+          key={area.id}
+          className={`flex items-center gap-1.5 rounded-lg border-2 border-dashed border-white/20 bg-white/10 px-3 py-2 ${isBanner ? "w-full" : isButton ? "min-w-[70px]" : "min-w-[100px]"}`}
+          style={isBanner || isButton ? undefined : { maxWidth: "240px" }}
+        >
+          {sharedTag}
+          <span className="text-[11px] font-medium text-white/85 truncate">{area.name}</span>
+        </div>
+      )
+    }
+
+    return (
+      <div
+        key={area.id}
+        className={`flex items-center gap-1.5 rounded-lg border-2 border-dashed ${s.bg} ${s.border} px-3 py-2 ${isBanner ? "w-full" : isButton ? "min-w-[70px]" : "min-w-[100px]"}`}
+        style={isBanner || isButton ? undefined : { maxWidth: "240px" }}
+      >
+        {sharedTag}
+        <span className="text-[11px] font-semibold text-[#0f172a] truncate">{area.name}</span>
+      </div>
+    )
+  }
+
+  const renderPreviewSection = (comp: Component, depth: number): React.ReactNode => {
+    const lname = comp.name.toLowerCase()
+    const isHeader = /헤더|header|내비|네비|gnb|lnb/.test(lname)
+    const isFooter = /푸터|footer/.test(lname)
+    const isOnDark = isHeader && depth === 0
+
+    const hasAreas = comp.areas.length > 0
+    const hasChildren = (comp.children?.length ?? 0) > 0
+
+    const sectionBg =
+      isOnDark           ? "bg-[#1e293b]" :
+      isFooter && depth === 0 ? "bg-[#f1f5f9]" :
+      depth === 0         ? "bg-white"    :
+      depth === 1         ? "bg-[#f8fafc]":
+                            "bg-white"
+
+    const wrapCls =
+      depth === 0
+        ? `${sectionBg} border-b border-[#e2e8f0] last:border-b-0`
+        : `${sectionBg} rounded-lg border border-[#e2e8f0] overflow-hidden`
+
+    const labelColor  = isOnDark ? "text-white/50" : depth > 0 ? "text-[#64748b]" : "text-[#94a3b8]"
+    const dividerCls  = isOnDark ? "border-white/10" : "border-[#f1f5f9]"
+    const padX        = depth === 0 ? "px-4" : "px-3"
+    const depthIndent = depth > 1 ? `ml-${Math.min(depth * 2, 8)}` : ""
+
+    return (
+      <div key={comp.id} className={`${wrapCls} ${depthIndent}`}>
+        <div className={`flex items-center gap-2 ${padX} py-2 ${(hasAreas || hasChildren) ? `border-b ${dividerCls}` : ""}`}>
+          {depth === 0
+            ? <div className={`w-1.5 h-1.5 rounded-sm shrink-0 ${isOnDark ? "bg-slate-500" : "bg-slate-300"}`} />
+            : <ChevronRight className={`w-3 h-3 shrink-0 ${isOnDark ? "text-white/30" : "text-[#94a3b8]"}`} />
+          }
+          <span className={`text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>
+            {comp.name}
+          </span>
+        </div>
+
+        {hasAreas && (
+          <div className={`flex flex-wrap gap-2 ${padX} py-3 ${hasChildren ? `border-b ${dividerCls}` : ""}`}>
+            {comp.areas.map((area) => renderWireframeArea(area, isOnDark))}
+          </div>
+        )}
+
+        {hasChildren && (
+          <div className={`${padX} py-2.5 space-y-2`}>
+            {comp.children!.map((child) => renderPreviewSection(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   // ─── 재귀 트리 노드 렌더러 ───────────────────────────────────────────────────
 
@@ -543,6 +657,17 @@ export default function WorkspacePage() {
         {/* 탭 헤더 */}
         <div className="flex items-center gap-1 px-5 py-3 border-b border-[#e4eaf2] bg-white">
           <button
+            onClick={() => setRightTab("PREVIEW")}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors ${
+              rightTab === "PREVIEW"
+                ? "bg-[#0f172a] text-white"
+                : "text-[#64748b] hover:text-[#0f172a]"
+            }`}
+          >
+            <Monitor className="w-3.5 h-3.5" />
+            PREVIEW
+          </button>
+          <button
             onClick={() => setRightTab("FLOW")}
             disabled={!flow}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
@@ -609,6 +734,90 @@ export default function WorkspacePage() {
 
         {/* 콘텐츠 */}
         <div className="flex-1 overflow-auto p-5">
+
+          {rightTab === "PREVIEW" && (
+            <div className="flex flex-col items-center">
+              {/* 타이틀 + 범례 */}
+              <div className="w-full max-w-[390px] mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Monitor className="w-4 h-4 text-[#0ea5e9]" />
+                  <h2 className="text-[14px] font-semibold text-[#0f172a]">페이지 구조 미리보기</h2>
+                  <span className="ml-auto text-[11px] text-[#94a3b8] font-mono">{hierarchy.repository}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(["button","banner","nav","input","list","card","default"] as const).map((t) => {
+                    const s = AREA_STYLE_MAP[t]
+                    const labels: Record<string, string> = {
+                      button:"버튼", banner:"이미지/배너", nav:"내비/메뉴",
+                      input:"입력/검색", list:"목록", card:"카드", default:"기타 UI"
+                    }
+                    return (
+                      <span key={t} className="flex items-center gap-1">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${s.tagCls} text-white`}>{s.tag}</span>
+                        <span className="text-[10px] text-[#94a3b8]">{labels[t]}</span>
+                      </span>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 아이폰 17 프레임 */}
+              <div className="relative w-[390px] shrink-0">
+                <div className="relative bg-[#1c1c1e] rounded-[52px] p-[10px] shadow-2xl ring-1 ring-white/10">
+                  {/* 사이드 버튼 (왼쪽) */}
+                  <div className="absolute -left-[3px] top-[112px] w-[3px] h-[36px] bg-[#3a3a3c] rounded-l-full" />
+                  <div className="absolute -left-[3px] top-[160px] w-[3px] h-[64px] bg-[#3a3a3c] rounded-l-full" />
+                  <div className="absolute -left-[3px] top-[236px] w-[3px] h-[64px] bg-[#3a3a3c] rounded-l-full" />
+                  {/* 전원 버튼 (오른쪽) */}
+                  <div className="absolute -right-[3px] top-[176px] w-[3px] h-[80px] bg-[#3a3a3c] rounded-r-full" />
+
+                  {/* 스크린 영역 */}
+                  <div className="bg-white rounded-[44px] overflow-hidden relative">
+                    {/* Dynamic Island */}
+                    <div className="absolute top-[14px] left-1/2 -translate-x-1/2 w-[120px] h-[34px] bg-[#1c1c1e] rounded-full z-20 flex items-center justify-center gap-3">
+                      <div className="w-[10px] h-[10px] rounded-full bg-[#2c2c2e]" />
+                      <div className="w-[14px] h-[14px] rounded-full bg-[#2c2c2e]" />
+                    </div>
+
+                    {/* 상태바 */}
+                    <div className="flex items-center justify-between px-8 pt-4 pb-1 h-[52px]">
+                      <span className="text-[12px] font-semibold text-[#0f172a]">9:41</span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+                          <rect x="0" y="4" width="3" height="8" rx="0.8" fill="#0f172a"/>
+                          <rect x="4.5" y="2.5" width="3" height="9.5" rx="0.8" fill="#0f172a"/>
+                          <rect x="9" y="0.5" width="3" height="11.5" rx="0.8" fill="#0f172a"/>
+                          <rect x="13.5" y="0" width="3" height="12" rx="0.8" fill="#e2e8f0"/>
+                        </svg>
+                        <svg width="16" height="12" viewBox="0 0 16 12" fill="#0f172a">
+                          <path d="M8 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/>
+                          <path d="M3.5 6.5C4.9 5.1 6.4 4.3 8 4.3s3.1.8 4.5 2.2" stroke="#0f172a" strokeWidth="1.4" fill="none" strokeLinecap="round"/>
+                          <path d="M1 4C3 2 5.4 1 8 1s5 1 7 3" stroke="#0f172a" strokeWidth="1.4" fill="none" strokeLinecap="round"/>
+                        </svg>
+                        <div className="flex items-center gap-0.5">
+                          <div className="w-[22px] h-[11px] border border-[#0f172a] rounded-[3px] p-[1.5px]">
+                            <div className="w-full h-full bg-[#0f172a] rounded-[1.5px]" />
+                          </div>
+                          <div className="w-[2px] h-[5px] bg-[#0f172a] rounded-r-sm" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 페이지 컨텐츠 (스크롤) */}
+                    <div className="overflow-y-auto" style={{ maxHeight: "700px" }}>
+                      {hierarchy.components.map((comp) => renderPreviewSection(comp, 0))}
+                    </div>
+
+                    {/* 홈 인디케이터 */}
+                    <div className="flex justify-center py-2 bg-white">
+                      <div className="w-[130px] h-[5px] bg-[#1c1c1e] rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {rightTab === "CODE" && (
             <>
               {selection?.type === "area" ? (
