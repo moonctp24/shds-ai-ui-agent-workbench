@@ -10,15 +10,13 @@ import {
   Code2,
   FileCode2,
   Diff,
-  CheckCircle2,
-  Loader2,
-  Circle,
   GitMerge,
   Share2,
   Plus,
   Trash2,
 } from "lucide-react"
 import { api } from "@/lib/api"
+import analysisData from "@/lib/shcard_demo_analysis.json"
 
 const ReactDiffViewer = dynamic(() => import("react-diff-viewer-continued"), { ssr: false })
 
@@ -128,35 +126,23 @@ type SelectionTarget =
   | { type: "area"; data: Area; parentComponent: Component }
   | null
 
-type ProgressStep = {
-  node: string
-  label: string
-  status: "pending" | "running" | "done"
-  message?: string
-}
-
-const INITIAL_STEPS: ProgressStep[] = [
-  { node: "repo_load",      label: "GitHub 레포지토리 클론",  status: "pending" },
-  { node: "file_scan",      label: "파일 목록 수집",           status: "pending" },
-  { node: "code_read",      label: "소스 코드 읽기",           status: "pending" },
-  { node: "analyze_code",   label: "AI 컴포넌트 구조 분석",    status: "pending" },
-  { node: "encode_nl",      label: "AI 자연어 설명 생성",      status: "pending" },
-  { node: "encode_flow",    label: "AI 사용자 플로우 생성",    status: "pending" },
-  { node: "encode_diagram", label: "AI 다이어그램 생성",       status: "pending" },
-]
-
 // ─── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
-export default function WorkspacePage() {
-  const [gitUrl, setGitUrl] = useState("")
-  const [branch, setBranch] = useState("main")
-  const [analyzeLoading, setAnalyzeLoading] = useState(false)
-  const isAnalyzingRef = useRef(false)   // 동기 가드: 중복 호출 방지
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+const INITIAL_DATA = analysisData as unknown as Hierarchy
 
-  const [hierarchy, setHierarchy] = useState<Hierarchy | null>(null)
-  const [expandedComponents, setExpandedComponents] = useState<string[]>([])
-  const [selection, setSelection] = useState<SelectionTarget>(null)
+export default function WorkspacePage() {
+  const [minorVersion, setMinorVersion] = useState(0)   // v1.0 → v1.1 → …
+
+  // JSON에서 직접 초기화 (API 호출 없음)
+  const [hierarchy, setHierarchy] = useState<Hierarchy>(INITIAL_DATA)
+  const [expandedComponents, setExpandedComponents] = useState<string[]>(
+    INITIAL_DATA.components?.length ? [INITIAL_DATA.components[0].id] : []
+  )
+  const [selection, setSelection] = useState<SelectionTarget>(
+    INITIAL_DATA.components?.length
+      ? { type: "component", data: INITIAL_DATA.components[0] as Component }
+      : null
+  )
 
   const [modifyLoading, setModifyLoading] = useState(false)
   const isModifyingRef = useRef(false)   // 동기 가드: 중복 호출 방지
@@ -169,10 +155,9 @@ export default function WorkspacePage() {
   const [editedDescriptions, setEditedDescriptions] = useState<Record<string, string>>({})
   // 사용자가 직접 추가한 자유 입력 항목
   const [addedItems, setAddedItems] = useState<{ id: string; text: string }[]>([])
-  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>(INITIAL_STEPS)
 
-  const [flow, setFlow] = useState<Flow | null>(null)
-  const [diagram, setDiagram] = useState<string | null>(null)
+  const [flow, setFlow] = useState<Flow | null>(INITIAL_DATA.flow ?? null)
+  const [diagram, setDiagram] = useState<string | null>(INITIAL_DATA.diagram ?? null)
   const [flowChangedSteps, setFlowChangedSteps] = useState<number[]>([])
   const [diagramChangedNodes, setDiagramChangedNodes] = useState<string[]>([])
 
@@ -186,93 +171,6 @@ export default function WorkspacePage() {
   }, [selection])
 
   // ─── 핸들러 ──────────────────────────────────────────────────────────────────
-
-  const handleAnalyze = async () => {
-    if (isAnalyzingRef.current) return   // 이미 요청 중이면 즉시 차단
-    const url = gitUrl.trim()
-    if (!url) {
-      setAnalyzeError("Git URL을 입력해주세요.")
-      return
-    }
-    isAnalyzingRef.current = true
-    setAnalyzeLoading(true)
-    setAnalyzeError(null)
-    setHierarchy(null)
-    setSelection(null)
-    setModifyResult(null)
-    setFlow(null)
-    setDiagram(null)
-    setFlowChangedSteps([])
-    setDiagramChangedNodes([])
-    setProgressSteps(INITIAL_STEPS)
-    setRightTab("FLOW")
-
-//    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-    const baseUrl = "http://localhost:8000"
-
-    try {
-      const response = await fetch(`${baseUrl}/api/analyze-repo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repo_url: url, branch }),
-      })
-
-      if (!response.ok || !response.body) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err.detail || "분석 요청에 실패했습니다.")
-      }
-
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ""
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const parts = buffer.split("\n\n")
-        buffer = parts.pop() ?? ""
-
-        for (const part of parts) {
-          const line = part.trim()
-          if (!line.startsWith("data: ")) continue
-
-          try {
-            const event = JSON.parse(line.slice(6))
-
-            if (event.type === "progress") {
-              setProgressSteps(prev =>
-                prev.map(step =>
-                  step.node === event.node
-                    ? { ...step, status: event.status, message: event.message }
-                    : step
-                )
-              )
-            } else if (event.type === "result") {
-              const data: Hierarchy = event.data
-              setHierarchy(data)
-              if (data.flow) setFlow(data.flow)
-              if (data.diagram) setDiagram(data.diagram)
-              if (data.components?.length) {
-                setExpandedComponents([data.components[0].id])
-                setSelection({ type: "component", data: data.components[0] })
-              }
-            } else if (event.type === "error") {
-              throw new Error(event.message)
-            }
-          } catch {
-            // JSON parse 오류 무시
-          }
-        }
-      }
-    } catch (e: any) {
-      setAnalyzeError(e?.message || "분석에 실패했습니다.")
-    } finally {
-      setAnalyzeLoading(false)
-      isAnalyzingRef.current = false   // 가드 해제
-    }
-  }
 
   const handleModify = async () => {
     if (selection?.type !== "area") return
@@ -310,6 +208,7 @@ export default function WorkspacePage() {
         original_diagram: diagram ?? undefined,
       })
       setModifyResult(res.data)
+      setMinorVersion(prev => prev + 1)   // v1.0 → v1.1 → v1.2 …
       if (res.data.modified_flow) {
         setFlow(res.data.modified_flow)
         setFlowChangedSteps(res.data.flow_changed_steps ?? [])
@@ -443,75 +342,23 @@ export default function WorkspacePage() {
       <aside className="w-[300px] flex-shrink-0 flex flex-col border-r border-[#e4eaf2] bg-[#0f172a]">
 
         {/* 헤더 */}
-        <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10">
-          <div className="w-8 h-8 rounded-lg bg-[#8b5cf6] flex items-center justify-center">
-            <Layers className="w-4 h-4 text-white" />
+        <div className="flex flex-col gap-1.5 px-5 py-4 border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#8b5cf6] flex items-center justify-center shrink-0">
+              <Layers className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-[15px] font-semibold text-white flex-1">AI Agent Workbench</span>
+            {/* 버전 배지 */}
+            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[#8b5cf6]/30 text-[#c4b5fd] border border-[#8b5cf6]/40">
+              v1.{minorVersion}
+            </span>
           </div>
-          <span className="text-[15px] font-semibold text-white">AI Agent Workbench</span>
+          {/* 분석 대상 레포 표시 */}
+          <p className="text-[10px] text-white/30 font-mono truncate pl-10">
+            shcard_demo · main
+          </p>
         </div>
 
-        {/* 좌측 상단: GitHub URL 입력 */}
-        <div className="px-4 py-4 border-b border-white/10">
-          <p className="text-[10px] text-white/50 uppercase tracking-widest mb-2">Repository</p>
-          <input
-            value={gitUrl}
-            onChange={(e) => setGitUrl(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-            placeholder="https://github.com/..."
-            className="w-full h-9 px-3 rounded-lg bg-white/10 text-white text-[12px] placeholder:text-white/30 border border-white/10 focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] mb-2"
-          />
-          <div className="flex gap-2 mb-2">
-            <input
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-              placeholder="branch (main)"
-              className="flex-1 h-8 px-3 rounded-lg bg-white/10 text-white text-[11px] placeholder:text-white/30 border border-white/10 focus:outline-none focus:ring-1 focus:ring-[#8b5cf6]"
-            />
-            <button
-              onClick={handleAnalyze}
-              disabled={analyzeLoading}
-              className="h-8 px-4 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-50 text-white text-[12px] font-medium rounded-lg transition-colors"
-            >
-              {analyzeLoading ? "분석 중..." : "분석"}
-            </button>
-          </div>
-          {analyzeError && (
-            <p className="text-[11px] text-red-400 mt-1">{analyzeError}</p>
-          )}
-        </div>
-
-        {/* 분석 진행 상태 */}
-        {analyzeLoading && (
-          <div className="px-4 py-3 border-b border-white/10">
-            <p className="text-[10px] text-white/40 uppercase tracking-widest mb-2.5">분석 진행 중</p>
-            <ul className="space-y-2">
-              {progressSteps.map((step) => (
-                <li key={step.node} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex-shrink-0">
-                    {step.status === "done" ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : step.status === "running" ? (
-                      <Loader2 className="w-3.5 h-3.5 text-[#8b5cf6] animate-spin" />
-                    ) : (
-                      <Circle className="w-3.5 h-3.5 text-white/20" />
-                    )}
-                  </span>
-                  <span className={`text-[11px] leading-relaxed transition-colors ${
-                    step.status === "done"
-                      ? "text-emerald-400"
-                      : step.status === "running"
-                      ? "text-white"
-                      : "text-white/25"
-                  }`}>
-                    {step.status === "running" && step.message
-                      ? step.message
-                      : step.label}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         {/* 좌측 중단: 선택된 컴포넌트/영역 설명 (체크 → 인라인 편집) */}
         <div className="flex-1 px-4 py-4 border-b border-white/10 overflow-y-auto">
