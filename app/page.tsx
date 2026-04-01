@@ -15,6 +15,8 @@ import {
   Circle,
   GitMerge,
   Share2,
+  Plus,
+  Trash2,
 } from "lucide-react"
 import { api } from "@/lib/api"
 
@@ -23,19 +25,49 @@ const ReactDiffViewer = dynamic(() => import("react-diff-viewer-continued"), { s
 // Mermaid 다이어그램 렌더러 (SSR 비활성화)
 function MermaidDiagramClient({ chart }: { chart: string }) {
   const ref = useRef<HTMLDivElement>(null)
+  const [renderError, setRenderError] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
+
   useEffect(() => {
     if (!chart || !ref.current) return
+    setRenderError(false)
     import("mermaid").then(({ default: mermaid }) => {
       mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "loose" })
       const id = `mermaid-${Math.random().toString(36).slice(2)}`
       mermaid.render(id, chart).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = svg
-      }).catch((e) => {
-        if (ref.current) ref.current.innerHTML = `<pre style="font-size:11px;color:#ef4444">${String(e)}</pre>`
+        if (ref.current) {
+          ref.current.innerHTML = svg
+          setRenderError(false)
+        }
+      }).catch(() => {
+        if (ref.current) ref.current.innerHTML = ""
+        setRenderError(true)
       })
     })
-  }, [chart])
-  return <div ref={ref} className="w-full overflow-x-auto p-4 bg-white rounded-xl border border-[#e4eaf2]" />
+  }, [chart, retryKey])
+
+  return (
+    <div className="w-full">
+      <div ref={ref} className={`w-full overflow-x-auto p-4 bg-white rounded-xl border ${renderError ? "border-red-200 hidden" : "border-[#e4eaf2]"}`} />
+      {renderError && (
+        <div className="flex flex-col items-center gap-3 py-6 px-4 bg-red-50 border border-red-200 rounded-xl">
+          <p className="text-[12px] text-red-500 text-center">
+            다이어그램 렌더링에 실패했습니다.
+          </p>
+          <button
+            onClick={() => setRetryKey(k => k + 1)}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-red-300 hover:border-red-400 hover:bg-red-50 text-red-600 text-[12px] font-medium rounded-lg transition-colors shadow-sm"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            다시 그리기
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 const MermaidDiagram = dynamic(() => Promise.resolve(MermaidDiagramClient), { ssr: false })
 
@@ -119,19 +151,24 @@ export default function WorkspacePage() {
   const [gitUrl, setGitUrl] = useState("")
   const [branch, setBranch] = useState("main")
   const [analyzeLoading, setAnalyzeLoading] = useState(false)
+  const isAnalyzingRef = useRef(false)   // 동기 가드: 중복 호출 방지
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
 
   const [hierarchy, setHierarchy] = useState<Hierarchy | null>(null)
   const [expandedComponents, setExpandedComponents] = useState<string[]>([])
   const [selection, setSelection] = useState<SelectionTarget>(null)
 
-  const [modificationRequest, setModificationRequest] = useState("")
   const [modifyLoading, setModifyLoading] = useState(false)
+  const isModifyingRef = useRef(false)   // 동기 가드: 중복 호출 방지
   const [modifyError, setModifyError] = useState<string | null>(null)
   const [modifyResult, setModifyResult] = useState<ModifyResult | null>(null)
 
   const [rightTab, setRightTab] = useState<"CODE" | "DIFF" | "FLOW" | "DIAGRAM">("FLOW")
   const [checkedDescriptions, setCheckedDescriptions] = useState<Record<string, boolean>>({})
+  // 체크된 항목의 편집된 텍스트 (key: `${id}-${idx}`, value: 편집 중인 텍스트)
+  const [editedDescriptions, setEditedDescriptions] = useState<Record<string, string>>({})
+  // 사용자가 직접 추가한 자유 입력 항목
+  const [addedItems, setAddedItems] = useState<{ id: string; text: string }[]>([])
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>(INITIAL_STEPS)
 
   const [flow, setFlow] = useState<Flow | null>(null)
@@ -139,32 +176,25 @@ export default function WorkspacePage() {
   const [flowChangedSteps, setFlowChangedSteps] = useState<number[]>([])
   const [diagramChangedNodes, setDiagramChangedNodes] = useState<string[]>([])
 
-  // 영역/컴포넌트 선택 변경 시 수정 결과 및 체크박스 초기화 (탭은 유지)
+  // 영역/컴포넌트 선택 변경 시 수정 결과·체크박스·편집내역·추가항목 초기화 (탭은 유지)
   useEffect(() => {
     setModifyResult(null)
     setModifyError(null)
-    setModificationRequest("")
     setCheckedDescriptions({})
+    setEditedDescriptions({})
+    setAddedItems([])
   }, [selection])
-
-  // 체크박스 변경 시 선택된 항목을 수정 요청 텍스트에어리아에 자동 반영
-  useEffect(() => {
-    if (!selection) return
-    const desc = selection.data.description
-    if (!Array.isArray(desc)) return
-    const keyPrefix = selection.data.id
-    const checked = desc.filter((_, idx) => checkedDescriptions[`${keyPrefix}-${idx}`])
-    setModificationRequest(checked.join("\n"))
-  }, [checkedDescriptions, selection])
 
   // ─── 핸들러 ──────────────────────────────────────────────────────────────────
 
   const handleAnalyze = async () => {
+    if (isAnalyzingRef.current) return   // 이미 요청 중이면 즉시 차단
     const url = gitUrl.trim()
     if (!url) {
       setAnalyzeError("Git URL을 입력해주세요.")
       return
     }
+    isAnalyzingRef.current = true
     setAnalyzeLoading(true)
     setAnalyzeError(null)
     setHierarchy(null)
@@ -177,7 +207,8 @@ export default function WorkspacePage() {
     setProgressSteps(INITIAL_STEPS)
     setRightTab("FLOW")
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+//    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+    const baseUrl = "http://localhost:8000"
 
     try {
       const response = await fetch(`${baseUrl}/api/analyze-repo`, {
@@ -239,15 +270,31 @@ export default function WorkspacePage() {
       setAnalyzeError(e?.message || "분석에 실패했습니다.")
     } finally {
       setAnalyzeLoading(false)
+      isAnalyzingRef.current = false   // 가드 해제
     }
   }
 
   const handleModify = async () => {
     if (selection?.type !== "area") return
-    if (!modificationRequest.trim()) {
-      setModifyError("수정 요청 내용을 입력해주세요.")
+    if (isModifyingRef.current) return   // 이미 요청 중이면 즉시 차단
+    isModifyingRef.current = true
+
+    // 체크된 항목의 편집 텍스트 수집
+    const checkedKeys = Object.entries(checkedDescriptions)
+      .filter(([, v]) => v)
+      .map(([k]) => k)
+    const checkedTexts = checkedKeys.map(k => editedDescriptions[k] ?? "").filter(Boolean)
+
+    // 사용자가 직접 추가한 항목 텍스트 수집
+    const addedTexts = addedItems.map(item => item.text.trim()).filter(Boolean)
+
+    if (checkedTexts.length === 0 && addedTexts.length === 0) {
+      setModifyError("수정할 항목을 선택하거나 추가해주세요.")
       return
     }
+
+    const modificationRequest = [...checkedTexts, ...addedTexts].join("\n")
+
     setModifyLoading(true)
     setModifyError(null)
     setModifyResult(null)
@@ -282,6 +329,7 @@ export default function WorkspacePage() {
       setModifyError(String(msg))
     } finally {
       setModifyLoading(false)
+      isModifyingRef.current = false   // 가드 해제
     }
   }
 
@@ -465,37 +513,69 @@ export default function WorkspacePage() {
           </div>
         )}
 
-        {/* 좌측 중단: 선택된 컴포넌트/영역 설명 (체크박스) */}
+        {/* 좌측 중단: 선택된 컴포넌트/영역 설명 (체크 → 인라인 편집) */}
         <div className="flex-1 px-4 py-4 border-b border-white/10 overflow-y-auto">
           <p className="text-[10px] text-white/50 uppercase tracking-widest mb-3">
             {selection?.type === "area" ? "영역 분석 결과" : "컴포넌트 분석 결과"}
           </p>
           {selectedDescription && selectedDescription.length > 0 ? (
             <>
-              <p className="text-[10px] text-white/30 mb-2">항목을 선택하면 수정 요청에 자동으로 반영됩니다.</p>
+              <p className="text-[10px] text-white/30 mb-3">항목을 선택하면 직접 편집할 수 있습니다.</p>
               <ul className="space-y-2">
                 {selectedDescription.map((sentence, idx) => {
                   const key = `${selection?.data?.id}-${idx}`
                   const checked = checkedDescriptions[key] ?? false
+                  const editedText = editedDescriptions[key] ?? sentence
+
+                  const toggleCheck = () => {
+                    const next = !checked
+                    setCheckedDescriptions(prev => ({ ...prev, [key]: next }))
+                    if (next) {
+                      // 체크 시 원본 텍스트로 편집 초기화
+                      setEditedDescriptions(prev => ({ ...prev, [key]: sentence }))
+                    } else {
+                      // 해제 시 편집 내역 삭제 (원본 복구)
+                      setEditedDescriptions(prev => {
+                        const next = { ...prev }
+                        delete next[key]
+                        return next
+                      })
+                    }
+                  }
+
                   return (
-                    <li key={key} className={`flex items-start gap-2 rounded-lg px-2 py-1.5 transition-colors ${checked ? "bg-[#8b5cf6]/20" : ""}`}>
-                      <input
-                        type="checkbox"
-                        id={key}
-                        checked={checked}
-                        onChange={() =>
-                          setCheckedDescriptions(prev => ({ ...prev, [key]: !checked }))
-                        }
-                        className="mt-0.5 w-3.5 h-3.5 shrink-0 accent-[#8b5cf6] cursor-pointer"
-                      />
-                      <label
-                        htmlFor={key}
-                        className={`text-[12px] leading-relaxed cursor-pointer transition-colors ${
-                          checked ? "text-[#c4b5fd] font-medium" : "text-white/70"
-                        }`}
-                      >
-                        {sentence}
-                      </label>
+                    <li
+                      key={key}
+                      className={`rounded-lg px-2 py-2 transition-colors ${
+                        checked ? "bg-[#8b5cf6]/20 border border-[#8b5cf6]/40" : "border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          id={key}
+                          checked={checked}
+                          onChange={toggleCheck}
+                          className="mt-1 w-3.5 h-3.5 shrink-0 accent-[#8b5cf6] cursor-pointer"
+                        />
+                        {checked ? (
+                          <textarea
+                            value={editedText}
+                            onChange={(e) =>
+                              setEditedDescriptions(prev => ({ ...prev, [key]: e.target.value }))
+                            }
+                            rows={Math.max(2, Math.ceil(editedText.length / 28))}
+                            className="flex-1 bg-white/10 text-[#c4b5fd] text-[12px] leading-relaxed rounded px-2 py-1 border border-[#8b5cf6]/50 focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] resize-none"
+                          />
+                        ) : (
+                          <label
+                            htmlFor={key}
+                            className="flex-1 text-[12px] leading-relaxed text-white/60 cursor-pointer select-none"
+                          >
+                            {sentence}
+                          </label>
+                        )}
+                      </div>
                     </li>
                   )
                 })}
@@ -506,33 +586,80 @@ export default function WorkspacePage() {
               {hierarchy ? "항목을 선택하세요." : "레포지토리를 분석하면 결과가 표시됩니다."}
             </p>
           )}
+
+          {/* 분석 완료 후에만 추가 항목 영역 표시 */}
+          {hierarchy && (
+            <>
+              {/* 직접 추가한 텍스트박스 목록 */}
+              {addedItems.length > 0 && (
+                <ul className="mt-3 space-y-2">
+                  {addedItems.map(item => (
+                    <li
+                      key={item.id}
+                      className="flex items-start gap-2 rounded-lg px-2 py-2 bg-[#8b5cf6]/20 border border-[#8b5cf6]/40"
+                    >
+                      <textarea
+                        value={item.text}
+                        onChange={e =>
+                          setAddedItems(prev =>
+                            prev.map(i => i.id === item.id ? { ...i, text: e.target.value } : i)
+                          )
+                        }
+                        placeholder="추가 수정 내용을 입력하세요..."
+                        rows={Math.max(2, Math.ceil((item.text.length || 20) / 28))}
+                        className="flex-1 bg-white/10 text-[#c4b5fd] text-[12px] leading-relaxed rounded px-2 py-1 border border-[#8b5cf6]/50 focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] resize-none placeholder:text-white/25"
+                      />
+                      <button
+                        onClick={() => setAddedItems(prev => prev.filter(i => i.id !== item.id))}
+                        className="mt-1 p-1 rounded hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors shrink-0"
+                        title="삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* 컴포넌트 추가 버튼 */}
+              <button
+                onClick={() =>
+                  setAddedItems(prev => [
+                    ...prev,
+                    { id: `added-${Date.now()}`, text: "" },
+                  ])
+                }
+                className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-[#8b5cf6]/60 bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 text-[#c4b5fd] text-[12px] font-medium transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                컴포넌트 추가
+              </button>
+            </>
+          )}
         </div>
 
-        {/* 좌측 하단: 자연어 수정 요청 */}
+        {/* 좌측 하단: 기획 수정 버튼 */}
         <div className="px-4 py-4">
-          <p className="text-[10px] text-white/50 uppercase tracking-widest mb-2">수정 요청</p>
           {selection?.type === "area" ? (
             <>
-              <textarea
-                value={modificationRequest}
-                onChange={(e) => setModificationRequest(e.target.value)}
-                placeholder="예) 검색 버튼을 오른쪽에 배치해줘"
-                className="w-full h-24 px-3 py-2 rounded-lg bg-white/10 text-white text-[12px] placeholder:text-white/30 border border-white/10 focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] resize-none mb-2"
-              />
               <button
                 onClick={handleModify}
-                disabled={modifyLoading}
-                className="w-full h-9 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-50 text-white text-[12px] font-medium rounded-lg transition-colors"
+                disabled={
+                  modifyLoading ||
+                  (Object.values(checkedDescriptions).every(v => !v) &&
+                    addedItems.every(i => !i.text.trim()))
+                }
+                className="w-full h-9 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[12px] font-medium rounded-lg transition-colors"
               >
-                {modifyLoading ? "수정 중..." : "코드 수정"}
+                {modifyLoading ? "수정 중..." : "기획 수정"}
               </button>
               {modifyError && (
-                <p className="text-[11px] text-red-400 mt-1">{modifyError}</p>
+                <p className="text-[11px] text-red-400 mt-1.5">{modifyError}</p>
               )}
             </>
           ) : (
             <p className="text-[12px] text-white/30">
-              영역(Area)을 선택하면 코드 수정이 가능합니다.
+              영역(Area)을 선택하면 기획서 수정이 가능합니다.
             </p>
           )}
         </div>
