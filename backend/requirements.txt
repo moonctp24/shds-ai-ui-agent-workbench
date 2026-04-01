@@ -1,8 +1,26 @@
+# ─── Web Framework ────────────────────────────────────────────────────────────
 fastapi
 uvicorn[standard]
-gitpython
 python-dotenv
-langchain-google-genai
-openai
+
+# ─── Git ──────────────────────────────────────────────────────────────────────
+gitpython
+
+# ─── LangGraph / LangChain ────────────────────────────────────────────────────
 langgraph
 langchain-core
+langchain-community
+
+# ─── OpenAI (LLM_PROVIDER=openai) ────────────────────────────────────────────
+openai
+
+# ─── Ollama (LLM_PROVIDER=ollama) ────────────────────────────────────────────
+# Ollama 서버 설치: https://ollama.com/download
+# 모델 다운로드:    ollama pull qwen2.5:7b
+langchain-ollama
+
+# ─── HuggingFace (LLM_PROVIDER=huggingface) ──────────────────────────────────
+# CUDA 버전 PyTorch는 별도 설치 필요:
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+transformers
+accelerate
