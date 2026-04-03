@@ -13,7 +13,7 @@ router = APIRouter()
 class ModifyCodeRequest(BaseModel):
     area_id: str = Field(..., description="수정할 Area의 ID (analyze-repo 응답의 area id)")
     source_file: str = Field(..., description="대상 파일 상대 경로")
-    original_code: str = Field(..., description="원본 코드")
+    original_code: str = Field(default="", description="원본 코드 (area 선택 시 필수, component 선택 시 생략 가능)")
     modification_request: str = Field(..., description="자연어 수정 요청 (한국어)")
     original_flow: Optional[Dict[str, Any]] = Field(
         default=None, description="분석 단계에서 생성된 원본 플로우 JSON (선택적)"
