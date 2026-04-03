@@ -15,6 +15,9 @@ import {
   Plus,
   Trash2,
   Monitor,
+  Sparkles,
+  Check,
+  X,
 } from "lucide-react"
 import { api } from "@/lib/api"
 import analysisData from "@/lib/shcard_demo_analysis.json"
@@ -147,6 +150,7 @@ const INITIAL_DATA = ((analysisData as any).data ?? analysisData) as Hierarchy
 
 export default function WorkspacePage() {
   const [minorVersion, setMinorVersion] = useState(0)   // v1.0 → v1.1 → …
+  const [activeRenderMode, setActiveRenderMode] = useState<"batch" | "individual">("batch")
 
   // JSON에서 직접 초기화 (API 호출 없음)
   const [hierarchy, setHierarchy] = useState<Hierarchy>(INITIAL_DATA)
@@ -164,7 +168,8 @@ export default function WorkspacePage() {
   const [modifyError, setModifyError] = useState<string | null>(null)
   const [modifyResult, setModifyResult] = useState<ModifyResult | null>(null)
 
-  const [rightTab, setRightTab] = useState<"PREVIEW" | "FLOW" | "DIAGRAM" | "CODE" | "DIFF">("PREVIEW")
+  const [activeTab, setActiveTab] = useState<"PREVIEW" | "FLOW" | "DIAGRAM" | "DIFF">("PREVIEW")
+  const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "DIFF"]
   const [checkedDescriptions, setCheckedDescriptions] = useState<Record<string, boolean>>({})
   // 체크된 항목의 편집된 텍스트 (key: `${id}-${idx}`, value: 편집 중인 텍스트)
   const [editedDescriptions, setEditedDescriptions] = useState<Record<string, string>>({})
@@ -249,7 +254,7 @@ export default function WorkspacePage() {
       } else {
         setDiagramChangedNodes([])
       }
-      setRightTab("DIFF")
+      setActiveTab("DIFF")
     } catch (e: any) {
       const msg =
         e?.response?.data?.detail || e?.message || "수정에 실패했습니다."
@@ -403,47 +408,54 @@ export default function WorkspacePage() {
     const isCompSelected = selection?.type === "component" && selection.data.id === comp.id
     const hasChildren = (comp.children?.length ?? 0) > 0
     const isExpandable = hasChildren   // areas는 트리에 노출하지 않음
-    const indentPx = depth * 14
-
-    const dotColor =
-      depth === 0 ? "bg-[#8b5cf6]" : depth === 1 ? "bg-[#a78bfa]" : "bg-[#c4b5fd]"
+    const paddingLeft = depth * 20 + 8
 
     return (
       <div key={comp.id}>
         <div
-          onClick={() => {
-            if (isExpandable) toggleComponent(comp.id)
-            setSelection({ type: "component", data: comp })
-          }}
-          style={{ paddingLeft: `${16 + indentPx}px` }}
-          className={`flex items-center gap-2 py-2.5 pr-4 cursor-pointer transition-colors ${
-            isCompSelected
-              ? "bg-[#8b5cf6]/10 border-l-2 border-[#8b5cf6]"
-              : "hover:bg-[#f8fafc] border-l-2 border-transparent"
-          }`}
+          className={`flex items-center justify-between py-2 px-3 rounded-lg cursor-pointer transition-colors ${
+            isCompSelected ? "bg-[#8b5cf6] text-white" : "hover:bg-[#121726]"
+          } group`}
+          style={{ paddingLeft: `${paddingLeft}px` }}
+          onClick={() => setSelection({ type: "component", data: comp })}
         >
-          <button
-            onClick={(e) => { e.stopPropagation(); if (isExpandable) toggleComponent(comp.id) }}
-            className="w-4 h-4 flex items-center justify-center text-[#64748b] shrink-0"
-          >
+          <div className="flex items-center gap-2">
             {isExpandable ? (
-              isExpanded
-                ? <ChevronDown className="w-3.5 h-3.5" />
-                : <ChevronRight className="w-3.5 h-3.5" />
+              <button
+                type="button"
+                className="w-5 h-5 flex items-center justify-center rounded hover:bg-black/10"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  toggleComponent(comp.id)
+                }}
+                aria-label={isExpanded ? "트리 접기" : "트리 펼치기"}
+              >
+                {isExpanded ? (
+                  <ChevronDown className={`w-4 h-4 ${isCompSelected ? "text-white" : "text-[#64748b]"}`} />
+                ) : (
+                  <ChevronRight className={`w-4 h-4 ${isCompSelected ? "text-white" : "text-[#64748b]"}`} />
+                )}
+              </button>
             ) : (
-              <span className="w-3.5 h-3.5 inline-block" />
+              <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${isCompSelected ? "bg-white" : "bg-[#8b5cf6]"} group-hover:text-white`} />
             )}
+            <span className={`text-[15px] ${isCompSelected ? "text-white font-medium" : "text-[#475569]"} group-hover:text-white`}>
+              {comp.name}
+            </span>
+          </div>
+          <button
+            className={`p-1 rounded hover:bg-black/10 transition-colors ${isCompSelected ? "text-white/70" : "text-[#c8d2e1]"}`}
+            onClick={(e) => {
+              e.stopPropagation()
+            }}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
-          <div className={`w-2 h-2 rounded-sm shrink-0 ${dotColor}`} />
-          <span className={`truncate font-medium ${
-            isCompSelected ? "text-[#8b5cf6]" : "text-[#0f172a]"
-          } ${depth === 0 ? "text-[13px]" : "text-[12px]"}`}>
-            {comp.name}
-          </span>
         </div>
-
-        {isExpanded && (
-          <>{comp.children?.map(child => renderComponentNode(child, depth + 1))}</>
+        {isExpandable && isExpanded && (
+          <div>
+            {comp.children!.map(child => renderComponentNode(child, depth + 1))}
+          </div>
         )}
       </div>
     )
@@ -452,353 +464,386 @@ export default function WorkspacePage() {
   // ─── 렌더링 ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="h-screen bg-white flex overflow-hidden">
-
-      {/* ── 좌측 패널 ─────────────────────────────────────────────────── */}
-      <aside className="w-[300px] flex-shrink-0 flex flex-col border-r border-[#e4eaf2] bg-[#0f172a]">
-
-        {/* 헤더 */}
-        <div className="flex flex-col gap-1.5 px-5 py-4 border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#8b5cf6] flex items-center justify-center shrink-0">
-              <Layers className="w-4 h-4 text-white" />
+    <div className="h-screen bg-white flex flex-col overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Scenario Editor */}
+        <aside className="flex-[1] flex flex-col bg-white overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-4">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8b5cf6] to-[#7c3aed] flex items-center justify-center shadow-sm">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0.5" y="0.5" width="39" height="39" rx="14.5" fill="#8B5CF6"/>
+                <rect x="0.5" y="0.5" width="39" height="39" rx="14.5" stroke="#8B5CF6"/>
+                <path d="M20.1343 10.7396L12.5682 14.0854C11.7741 14.4366 11.7741 15.5634 12.5682 15.9146L20.1343 19.2604C20.3988 19.3773 20.7009 19.374 20.9628 19.2514L28.1086 15.9056C28.8766 15.5461 28.8766 14.4539 28.1086 14.0943L20.9628 10.7485C20.7009 10.6259 20.3988 10.6227 20.1343 10.7396Z" stroke="white" strokeWidth="2"/>
+                <path d="M11.5857 20.5555L20.0611 24.7719C20.349 24.9151 20.6881 24.9112 20.9726 24.7614L28.9571 20.5555" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M11.5857 25L20.0611 29.2164C20.349 29.3596 20.6881 29.3557 20.9726 29.2058L28.9571 25" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
             </div>
-            <span className="text-[15px] font-semibold text-white flex-1">AI Agent Workbench</span>
+            <span className="text-[18px] font-semibold text-[#0f172a]">Workspace</span>
             {/* 버전 배지 */}
-            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[#8b5cf6]/30 text-[#c4b5fd] border border-[#8b5cf6]/40">
+            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[#8b5cf6]/20 text-[#8b5cf6] border border-[#8b5cf6]/40 ml-auto">
               v1.{minorVersion}
             </span>
           </div>
-          {/* 분석 대상 레포 표시 */}
-          <p className="text-[10px] text-white/30 font-mono truncate pl-10">
-            shcard_demo · main
-          </p>
-        </div>
 
-
-        {/* 좌측 중단: 영역 분석 결과 */}
-        <div className="flex-1 px-4 py-4 border-b border-white/10 overflow-y-auto">
-          <p className="text-[10px] text-white/50 uppercase tracking-widest mb-3">
-            영역 분석 결과
-          </p>
-
-          {!selection || selection.type !== "component" ? (
-            /* 미선택 */
-            <p className="text-[12px] text-white/30">항목을 선택하세요.</p>
-          ) : (selection.data.children?.length ?? 0) > 0 ? (
-            /* 비리프 comp (자식 있음) → description 줄글 */
-            <p className="text-[12px] text-white/60 leading-relaxed">
-              {Array.isArray(selection.data.description)
-                ? selection.data.description.join(" ")
-                : (selection.data.description ?? "")}
-            </p>
-          ) : selection.data.areas.length > 0 ? (
-            /* 리프 comp (자식 없음, areas 있음) → area name 체크박스 리스트 */
-            <>
-              <p className="text-[10px] text-white/30 mb-3">항목을 선택하면 직접 편집할 수 있습니다.</p>
-              <ul className="space-y-2">
-                {selection.data.areas.map((area) => {
-                  const key = area.id
-                  const checked = checkedDescriptions[key] ?? false
-                  const editedText = editedDescriptions[key] ?? area.name
-
-                  const toggleCheck = () => {
-                    const next = !checked
-                    setCheckedDescriptions(prev => ({ ...prev, [key]: next }))
-                    if (next) {
-                      setEditedDescriptions(prev => ({ ...prev, [key]: area.name }))
-                    } else {
-                      setEditedDescriptions(prev => {
-                        const n = { ...prev }
-                        delete n[key]
-                        return n
-                      })
-                    }
-                  }
-
-                  return (
-                    <li
-                      key={key}
-                      className={`rounded-lg px-2 py-2 transition-colors ${
-                        checked ? "bg-[#8b5cf6]/20 border border-[#8b5cf6]/40" : "border border-transparent"
-                      }`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <input
-                          type="checkbox"
-                          id={key}
-                          checked={checked}
-                          onChange={toggleCheck}
-                          className="mt-1 w-3.5 h-3.5 shrink-0 accent-[#8b5cf6] cursor-pointer"
-                        />
-                        {checked ? (
-                          <textarea
-                            value={editedText}
-                            onChange={(e) =>
-                              setEditedDescriptions(prev => ({ ...prev, [key]: e.target.value }))
-                            }
-                            rows={Math.max(2, Math.ceil(editedText.length / 28))}
-                            className="flex-1 bg-white/10 text-[#c4b5fd] text-[12px] leading-relaxed rounded px-2 py-1 border border-[#8b5cf6]/50 focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] resize-none"
-                          />
-                        ) : (
-                          <label
-                            htmlFor={key}
-                            className="flex-1 text-[12px] leading-relaxed text-white/60 cursor-pointer select-none"
-                          >
-                            {area.name}
-                          </label>
-                        )}
-                      </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </>
-          ) : (
-            /* 리프 comp인데 areas도 없는 경우 → description 줄글 */
-            <p className="text-[12px] text-white/60 leading-relaxed">
-              {Array.isArray(selection.data.description)
-                ? selection.data.description.join(" ")
-                : (selection.data.description ?? "설명이 없습니다.")}
-            </p>
-          )}
-
-          {/* 분석 완료 후에만 추가 항목 영역 표시 */}
-          {hierarchy && (
-            <>
-              {/* 직접 추가한 텍스트박스 목록 */}
-              {addedItems.length > 0 && (
-                <ul className="mt-3 space-y-2">
-                  {addedItems.map(item => (
-                    <li
-                      key={item.id}
-                      className="flex items-start gap-2 rounded-lg px-2 py-2 bg-[#8b5cf6]/20 border border-[#8b5cf6]/40"
-                    >
-                      <textarea
-                        value={item.text}
-                        onChange={e =>
-                          setAddedItems(prev =>
-                            prev.map(i => i.id === item.id ? { ...i, text: e.target.value } : i)
-                          )
-                        }
-                        placeholder="추가 수정 내용을 입력하세요..."
-                        rows={Math.max(2, Math.ceil((item.text.length || 20) / 28))}
-                        className="flex-1 bg-white/10 text-[#c4b5fd] text-[12px] leading-relaxed rounded px-2 py-1 border border-[#8b5cf6]/50 focus:outline-none focus:ring-1 focus:ring-[#8b5cf6] resize-none placeholder:text-white/25"
-                      />
-                      <button
-                        onClick={() => setAddedItems(prev => prev.filter(i => i.id !== item.id))}
-                        className="mt-1 p-1 rounded hover:bg-white/10 text-white/40 hover:text-red-400 transition-colors shrink-0"
-                        title="삭제"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* 컴포넌트 추가 버튼 */}
+          <div className="flex-1 flex flex-col p-5 overflow-hidden">
+            <div className="flex gap-2 mb-4">
               <button
-                onClick={() =>
-                  setAddedItems(prev => [
-                    ...prev,
-                    { id: `added-${Date.now()}`, text: "" },
-                  ])
-                }
-                className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-[#8b5cf6]/60 bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 text-[#c4b5fd] text-[12px] font-medium transition-colors"
+                onClick={() => setActiveRenderMode("batch")}
+                className={`flex-1 h-13 rounded-lg flex items-center justify-center gap-2 text-[13px] font-medium transition-colors ${
+                  activeRenderMode === "batch"
+                    ? "bg-[#8b5cf6] text-white"
+                    : "bg-[#e4eaf2] text-[#94a3b8] hover:bg-[#d9e0e8]"
+                }`}
               >
-                <Plus className="w-3.5 h-3.5" />
-                컴포넌트 추가
+                <Sparkles className="w-4 h-4 stroke-[1.5]" />
+                일괄 UI렌더링
               </button>
-            </>
-          )}
-        </div>
-
-        {/* 좌측 하단: 기획 수정 버튼 */}
-        <div className="px-4 py-4">
-          {selection ? (
-            <>
               <button
-                onClick={handleModify}
-                disabled={
-                  modifyLoading ||
-                  (Object.values(checkedDescriptions).every(v => !v) &&
-                    addedItems.every(i => !i.text.trim()))
-                }
-                className="w-full h-9 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-40 disabled:cursor-not-allowed text-white text-[12px] font-medium rounded-lg transition-colors"
+                onClick={() => setActiveRenderMode("individual")}
+                className={`flex-1 h-13 rounded-lg flex items-center justify-center gap-2 text-[13px] font-medium transition-colors ${
+                  activeRenderMode === "individual"
+                    ? "bg-[#8b5cf6] text-white"
+                    : "bg-[#e4eaf2] text-[#94a3b8] hover:bg-[#d9e0e8]"
+                }`}
               >
-                {modifyLoading ? "수정 중..." : "기획 수정"}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="0.75" y="0.75" width="14.5" height="5.35714" stroke={activeRenderMode === "individual" ? "#fff" : "#77879D"} strokeWidth="1.5"/>
+                  <rect x="0.75" y="9.89282" width="7.64286" height="5.35714" stroke={activeRenderMode === "individual" ? "#fff" : "#77879D"} strokeWidth="1.5"/>
+                  <rect x="11.75" y="9.75" width="3.07143" height="5.35714" stroke={activeRenderMode === "individual" ? "#fff" : "#77879D"} strokeWidth="1.5"/>
+                </svg>
+                개별 UI렌더링
               </button>
-              {modifyError && (
-                <p className="text-[11px] text-red-400 mt-1.5">{modifyError}</p>
-              )}
-            </>
-          ) : (
-            <p className="text-[12px] text-white/30">
-              항목을 선택하면 기획서 수정이 가능합니다.
-            </p>
-          )}
-        </div>
-      </aside>
-
-      {/* ── 중앙 패널: 계층 트리 ──────────────────────────────────────── */}
-      <div className="w-[280px] flex-shrink-0 flex flex-col border-r border-[#e4eaf2] overflow-hidden">
-        <div className="px-5 py-4 border-b border-[#e4eaf2]">
-          <div className="flex items-center gap-2">
-            <GitBranch className="w-4 h-4 text-[#8b5cf6]" />
-            <span className="text-[13px] font-semibold text-[#0f172a]">
-              {hierarchy?.repository ?? "Project Tree"}
-            </span>
-          </div>
-          <p className="text-[10px] text-[#94a3b8] mt-0.5 uppercase tracking-widest">
-            Repository → 컴포넌트 → 영역
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-y-auto py-2">
-          {!hierarchy ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-[12px] text-[#94a3b8]">분석 결과가 없습니다.</p>
             </div>
-          ) : (
-            hierarchy.components.map(comp => renderComponentNode(comp, 0))
-          )}
-        </div>
-      </div>
 
-      {/* ── 우측 패널: 코드 뷰 ────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#f8fafc]">
-
-        {/* 탭 헤더 */}
-        <div className="flex items-center gap-1 px-5 py-3 border-b border-[#e4eaf2] bg-white">
-          <button
-            onClick={() => setRightTab("PREVIEW")}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors ${
-              rightTab === "PREVIEW"
-                ? "bg-[#0f172a] text-white"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
-          >
-            <Monitor className="w-3.5 h-3.5" />
-            PREVIEW
-          </button>
-          <button
-            onClick={() => setRightTab("FLOW")}
-            disabled={!flow}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              rightTab === "FLOW"
-                ? "bg-[#0f172a] text-white"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
-          >
-            <GitMerge className="w-3.5 h-3.5" />
-            FLOW
-            {flow && (
-              <span className={`w-1.5 h-1.5 rounded-full ${flowChangedSteps.length > 0 ? "bg-amber-400" : "bg-emerald-400"}`} />
-            )}
-          </button>
-          <button
-            onClick={() => setRightTab("DIAGRAM")}
-            disabled={!diagram}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              rightTab === "DIAGRAM"
-                ? "bg-[#0f172a] text-white"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            DIAGRAM
-            {diagram && (
-              <span className={`w-1.5 h-1.5 rounded-full ${diagramChangedNodes.length > 0 ? "bg-amber-400" : "bg-blue-400"}`} />
-            )}
-          </button>
-          <button
-            onClick={() => setRightTab("DIFF")}
-            disabled={!modifyResult}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-              rightTab === "DIFF"
-                ? "bg-[#0f172a] text-white"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
-          >
-            <Diff className="w-3.5 h-3.5" />
-            DIFF
-            {modifyResult && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-            )}
-          </button>
-
-          {selection?.type === "area" && (
-            <div className="ml-auto flex items-center gap-2 text-[11px] text-[#94a3b8]">
-              <FileCode2 className="w-3.5 h-3.5" />
-              {selection.data.source_file}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[14px] font-semibold text-[#475569] tracking-widest">SCENARIO EDITOR</span>
+              <span className="px-2 py-1 bg-[#f1f5f9] text-[#64748b] text-[11px] font-medium rounded">
+                Auto Saved
+              </span>
             </div>
-          )}
-        </div>
-
-        {/* 콘텐츠 */}
-        <div className="flex-1 overflow-auto p-5">
-
-          {rightTab === "PREVIEW" && (
-            <div className="flex flex-col items-center">
-              {/* 타이틀 */}
-              <div className="w-full max-w-[390px] mb-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Monitor className="w-4 h-4 text-[#0ea5e9]" />
-                  <h2 className="text-[14px] font-semibold text-[#0f172a]">페이지 구조 미리보기</h2>
-                  <span className="ml-auto text-[11px] text-[#94a3b8] font-mono">{hierarchy.repository}</span>
+            
+            {!selection || selection.type !== "component" ? (
+              <div className="flex-1 border-2 border-dashed border-[#c8d2e1] rounded-xl h-full flex items-center justify-center mb-4">
+                <p className="text-[14px] text-[#94a3b8]">항목을 선택하세요.</p>
+              </div>
+            ) : (selection.data.children?.length ?? 0) > 0 ? (
+              /* 비리프 comp (자식 있음) → description 줄글 */
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                <div>
+                  <h3 className="text-[14px] font-medium text-[#475569] mb-2 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
+                    원문
+                  </h3>
+                  <div className="flex-1 bg-[#e4eaf2] rounded-xl p-4 min-h-[140px]">
+                    <p className="text-[14px] text-[#94a3b8] leading-relaxed">
+                      {Array.isArray(selection.data.description)
+                        ? selection.data.description.join(" ")
+                        : (selection.data.description ?? "")}
+                    </p>
+                  </div>
                 </div>
               </div>
+            ) : selection.data.areas.length > 0 ? (
+              /* 리프 comp (자식 없음, areas 있음) → area name 체크박스 리스트 */
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                <div>
+                  <h3 className="text-[12px] font-medium text-[#8b5cf6] mb-2 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                    마이크로 요구사항
+                  </h3>
+                  <p className="text-[10px] text-[#94a3b8] mb-3">항목을 선택하면 직접 편집할 수 있습니다.</p>
+                  <div className="space-y-2">
+                    {selection.data.areas.map((area) => {
+                      const key = area.id
+                      const checked = checkedDescriptions[key] ?? false
+                      const editedText = editedDescriptions[key] ?? area.name
 
-              {/* 아이폰 17 프레임 */}
-              <div className="relative w-[390px] shrink-0">
-                <div className="relative bg-[#1c1c1e] rounded-[52px] p-[10px] shadow-2xl ring-1 ring-white/10">
-                  {/* 사이드 버튼 (왼쪽) */}
-                  <div className="absolute -left-[3px] top-[112px] w-[3px] h-[36px] bg-[#3a3a3c] rounded-l-full" />
-                  <div className="absolute -left-[3px] top-[160px] w-[3px] h-[64px] bg-[#3a3a3c] rounded-l-full" />
-                  <div className="absolute -left-[3px] top-[236px] w-[3px] h-[64px] bg-[#3a3a3c] rounded-l-full" />
-                  {/* 전원 버튼 (오른쪽) */}
-                  <div className="absolute -right-[3px] top-[176px] w-[3px] h-[80px] bg-[#3a3a3c] rounded-r-full" />
+                      const toggleCheck = () => {
+                        const next = !checked
+                        setCheckedDescriptions(prev => ({ ...prev, [key]: next }))
+                        if (next) {
+                          setEditedDescriptions(prev => ({ ...prev, [key]: area.name }))
+                        } else {
+                          setEditedDescriptions(prev => {
+                            const n = { ...prev }
+                            delete n[key]
+                            return n
+                          })
+                        }
+                      }
 
-                  {/* 스크린 영역 */}
-                  <div className="bg-white rounded-[44px] overflow-hidden relative">
-                    {/* Dynamic Island */}
-                    <div className="absolute top-[14px] left-1/2 -translate-x-1/2 w-[120px] h-[34px] bg-[#1c1c1e] rounded-full z-20 flex items-center justify-center gap-3">
-                      <div className="w-[10px] h-[10px] rounded-full bg-[#2c2c2e]" />
-                      <div className="w-[14px] h-[14px] rounded-full bg-[#2c2c2e]" />
-                    </div>
-
-                    {/* 상태바 */}
-                    <div className="flex items-center justify-between px-8 pt-4 pb-1 h-[52px]">
-                      <span className="text-[12px] font-semibold text-[#0f172a]">9:41</span>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
-                          <rect x="0" y="4" width="3" height="8" rx="0.8" fill="#0f172a"/>
-                          <rect x="4.5" y="2.5" width="3" height="9.5" rx="0.8" fill="#0f172a"/>
-                          <rect x="9" y="0.5" width="3" height="11.5" rx="0.8" fill="#0f172a"/>
-                          <rect x="13.5" y="0" width="3" height="12" rx="0.8" fill="#e2e8f0"/>
-                        </svg>
-                        <svg width="16" height="12" viewBox="0 0 16 12" fill="#0f172a">
-                          <path d="M8 9.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/>
-                          <path d="M3.5 6.5C4.9 5.1 6.4 4.3 8 4.3s3.1.8 4.5 2.2" stroke="#0f172a" strokeWidth="1.4" fill="none" strokeLinecap="round"/>
-                          <path d="M1 4C3 2 5.4 1 8 1s5 1 7 3" stroke="#0f172a" strokeWidth="1.4" fill="none" strokeLinecap="round"/>
-                        </svg>
-                        <div className="flex items-center gap-0.5">
-                          <div className="w-[22px] h-[11px] border border-[#0f172a] rounded-[3px] p-[1.5px]">
-                            <div className="w-full h-full bg-[#0f172a] rounded-[1.5px]" />
+                      return (
+                        <div 
+                          key={key} 
+                          className={`flex items-start gap-2 border rounded-lg px-3 py-2 ${
+                            checked ? "bg-[#f8fafc] border-[#8b5cf6]" : "bg-white border-[#e4eaf2]"
+                          }`}
+                        >
+                          <div 
+                            onClick={toggleCheck}
+                            className={`w-5 h-5 rounded flex items-center justify-center cursor-pointer mt-0.5 flex-shrink-0 ${
+                              checked ? "bg-[#8b5cf6]" : "border border-[#c8d2e1]"
+                            }`}
+                          >
+                            {checked && <Check className="w-3 h-3 text-white stroke-[2]" />}
                           </div>
-                          <div className="w-[2px] h-[5px] bg-[#0f172a] rounded-r-sm" />
+                          {checked ? (
+                            <textarea
+                              value={editedText}
+                              onChange={(e) =>
+                                setEditedDescriptions(prev => ({ ...prev, [key]: e.target.value }))
+                              }
+                              rows={Math.max(2, Math.ceil(editedText.length / 28))}
+                              className="flex-1 text-[12px] text-[#0f172a] bg-transparent border-none resize-none focus:outline-none min-h-[60px] leading-relaxed"
+                            />
+                          ) : (
+                            <span className="flex-1 text-[12px] text-[#0f172a] leading-relaxed whitespace-pre-line">{area.name}</span>
+                          )}
+                          <button 
+                            onClick={() => {}}
+                            className="text-[#94a3b8] hover:text-[#0f172a] transition-colors flex-shrink-0 mt-0.5"
+                          >
+                            <X className="w-4 h-4 stroke-[1.5]" />
+                          </button>
+                        </div>
+                      )
+                    })}
+
+                    {/* 직접 추가한 텍스트박스 목록 */}
+                    {addedItems.map(item => (
+                      <div
+                        key={item.id}
+                        className="flex items-start gap-2 rounded-lg px-3 py-2 bg-[#f8fafc] border border-[#8b5cf6]"
+                      >
+                        <div className="w-5 h-5 rounded flex items-center justify-center cursor-pointer mt-0.5 flex-shrink-0 bg-[#8b5cf6]">
+                          <Check className="w-3 h-3 text-white stroke-[2]" />
+                        </div>
+                        <textarea
+                          value={item.text}
+                          onChange={e =>
+                            setAddedItems(prev =>
+                              prev.map(i => i.id === item.id ? { ...i, text: e.target.value } : i)
+                            )
+                          }
+                          placeholder="추가 수정 내용을 입력하세요..."
+                          rows={Math.max(2, Math.ceil((item.text.length || 20) / 28))}
+                          className="flex-1 text-[12px] text-[#0f172a] bg-transparent border-none resize-none focus:outline-none min-h-[60px] leading-relaxed placeholder:text-[#94a3b8]"
+                        />
+                        <button
+                          onClick={() => setAddedItems(prev => prev.filter(i => i.id !== item.id))}
+                          className="text-[#94a3b8] hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
+                          title="삭제"
+                        >
+                          <X className="w-4 h-4 stroke-[1.5]" />
+                        </button>
+                      </div>
+                    ))}
+
+                    <button 
+                      onClick={() =>
+                        setAddedItems(prev => [
+                          ...prev,
+                          { id: `added-${Date.now()}`, text: "" },
+                        ])
+                      }
+                      className="w-full h-10 border-2 border-dashed border-[#c8d2e1] rounded-lg flex items-center justify-center gap-1 text-[#94a3b8] hover:border-[#8b5cf6] hover:text-[#8b5cf6] transition-colors"
+                    >
+                      <span className="text-lg">+</span>
+                      <span className="text-[12px] font-medium">새로운 내용 추가</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* 리프 comp인데 areas도 없는 경우 → description 줄글 */
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                <div>
+                  <h3 className="text-[14px] font-medium text-[#475569] mb-2 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
+                    원문
+                  </h3>
+                  <div className="flex-1 bg-[#e4eaf2] rounded-xl p-4 min-h-[140px]">
+                    <p className="text-[14px] text-[#94a3b8] leading-relaxed">
+                      {Array.isArray(selection.data.description)
+                        ? selection.data.description.join(" ")
+                        : (selection.data.description ?? "설명이 없습니다.")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 기획 수정 버튼 */}
+            <div className="mt-auto pt-4">
+              <span className="text-[14px] font-semibold text-[#475569] tracking-widest mb-3 block">NEW SCENARIO</span>
+              {selection ? (
+                <>
+                  <button
+                    onClick={handleModify}
+                    disabled={
+                      modifyLoading ||
+                      (Object.values(checkedDescriptions).every(v => !v) &&
+                        addedItems.every(i => !i.text.trim()))
+                    }
+                    className="w-full h-13 px-4 hover:bg-[#7c3aed] bg-[#8b5cf6] text-white rounded-lg flex items-center justify-center gap-2 mb-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="6.2666" y="0.75" width="3.83333" height="3.85498" stroke="#fff" strokeWidth="1.5"/>
+                      <rect x="0.75" y="11.395" width="3.83333" height="3.85498" stroke="#fff" strokeWidth="1.5"/>
+                      <rect x="11.4167" y="11.395" width="3.83333" height="3.85498" stroke="#fff" strokeWidth="1.5"/>
+                      <path d="M13.3333 10.645V8.41373H8.2222M3.11108 10.645V8.41373H8.2222M8.2222 8.41373V4.84375" stroke="#fff"/>
+                    </svg>
+                    <span className="text-[16px] font-medium">{modifyLoading ? "기획 수정 중..." : "기획 수정"}</span>
+                  </button>
+                  {modifyError && (
+                    <p className="text-[11px] text-red-500 mt-1.5">{modifyError}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-[12px] text-[#94a3b8]">
+                  항목을 선택하면 기획서 수정이 가능합니다.
+                </p>
+              )}
+            </div>
+          </div>
+        </aside>
+        
+        {/* Center Group - Project Tree */}
+        <div className="flex-[1.33] flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-6 pt-4">
+            <div className="flex gap-2.5">
+              <div className="w-7 h-7 rounded-md flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M1 0.333374V3.66671M5.48 13.6667H2.70622C2.43392 13.6667 2.1734 13.5557 1.98483 13.3592L1.27861 12.6236C1.09983 12.4374 1 12.1892 1 11.9311V3.66671M1 3.66671H5.48M11.535 1.46099L12.225 2.53909C12.4088 2.82629 12.7263 3.00004 13.0673 3.00004H16C16.5523 3.00004 17 3.44775 17 4.00004V5.33337C17 5.88566 16.5523 6.33337 16 6.33337H9.68C9.12772 6.33337 8.68 5.88566 8.68 5.33337V2.00004C8.68 1.44776 9.12772 1.00004 9.68 1.00004H10.6927C11.0337 1.00004 11.3512 1.17379 11.535 1.46099Z" stroke="#8559EC" strokeWidth="2"/>
+                  <path d="M8.67993 15.3333V12C8.67993 11.4477 9.12765 11 9.67993 11H10.6927C11.0336 11 11.3511 11.1737 11.5349 11.4609L12.2249 12.5391C12.4087 12.8263 12.7262 13 13.0672 13H15.9999C16.5522 13 16.9999 13.4477 16.9999 14V15.3333C16.9999 15.8856 16.5522 16.3333 15.9999 16.3333H9.67993C9.12765 16.3333 8.67993 15.8856 8.67993 15.3333Z" stroke="#8559EC" strokeWidth="2"/>
+                </svg>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[18px] font-semibold text-[#0f172a]">Project Tree</span>
+                <span className="text-[14px] text-[#94a3b8] tracking-wide">1-2-3 HIERARCHY</span>
+              </div>
+            </div>
+            
+            <button className="w-9 h-9 rounded-full border border-[#e4eaf2] flex items-center justify-center hover:bg-[#f8fafc] transition-colors">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0.5" y="0.5" width="39" height="39" rx="14.5" fill="white"/>
+                <rect x="0.5" y="0.5" width="39" height="39" rx="14.5" stroke="#8559EC"/>
+                <path d="M27.8206 11.8148C28.1895 11.4135 28.8048 11.3957 29.1954 11.7748C29.5858 12.1539 29.6032 12.7862 29.2343 13.1876L20.9646 22.1861C20.7842 22.3823 20.5345 22.4956 20.2719 22.4995C20.0091 22.5034 19.7557 22.3976 19.5698 22.2066L16.6511 19.2071C16.2711 18.8167 16.2711 18.1838 16.6511 17.7933C17.031 17.4028 17.6469 17.4028 18.0268 17.7933L20.2377 20.0654L27.8206 11.8148Z" fill="#8559EC"/>
+                <path d="M16.8525 25.5612C13.5951 23.6285 12.4791 19.3481 14.3597 16.0006C16.2403 12.6531 20.4055 11.5062 23.6629 13.4388L24.6358 11.7071C20.4478 9.22221 15.0925 10.6968 12.6746 15.0008C10.2566 19.3047 11.6915 24.8081 15.8796 27.2929C20.0676 29.7778 25.4228 28.3032 27.8408 23.9992C28.9904 21.953 29.0139 20 29.0139 17.5004H27.0681C27.0681 19.5 26.9509 21.5838 26.1557 22.9994C24.275 26.3469 20.1098 27.4938 16.8525 25.5612Z" fill="#8559EC"/>
+              </svg>
+            </button>
+          </div>
+
+          <div className="flex-1 px-6 pt-5 pb-8 flex flex-col">
+            <div className="bg-[#0F172A] rounded-xl px-5 py-4 mb-8 flex items-center justify-between">
+              <div>
+                <span className="text-[12px] text-white/70 uppercase tracking-wider">ACTIVE PLAN</span>
+                <h2 className="text-[16px] font-semibold text-white mt-0.5">{hierarchy?.repository ?? "분석 대기"}</h2>
+              </div>
+              <div className="text-right">
+                <span className="px-2 py-0.5 bg-white/20 text-white text-[12px] font-medium rounded">v1.{minorVersion}</span>
+                <p className="text-[12px] text-white/70 mt-1">Scenario Build</p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-2">
+              {hierarchy?.components?.length ? (
+                hierarchy.components.map(comp => renderComponentNode(comp))
+              ) : (
+                <div className="border-2 border-dashed border-[#c8d2e1] rounded-xl flex items-center justify-center h-full w-full">
+                  <span className="text-[14px] text-[#94a3b8]">시나리오 트리 분석을 실행하세요</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Group - Tabs & Preview */}
+        <aside className="flex-[1.7] flex flex-col bg-white overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="flex items-center">
+              {tabs.map((tab) => {
+                const isDiff = tab === "DIFF"
+                const isDisabled = isDiff && !modifyResult
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => !isDisabled && setActiveTab(tab as typeof activeTab)}
+                    disabled={isDisabled}
+                    className={`px-4 py-1.5 mr-0.5 text-[14px] font-medium rounded-full transition-all flex items-center gap-1.5 ${
+                    activeTab === tab
+                      ? "bg-[#0f172a] text-white shadow-sm"
+                      : isDisabled
+                      ? "text-[#cbd5e1] cursor-not-allowed"
+                      : "text-[#64748b] hover:text-[#0f172a]"
+                    }`}
+                  >
+                    {tab}
+                    {isDiff && modifyResult && <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />}
+                  </button>
+                )
+              })}
+              {/* {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab as typeof activeTab)}
+                  className={`px-4 py-1.5 mr-0.5 text-[14px] font-medium rounded-full transition-all ${
+                    activeTab === tab
+                      ? "bg-[#0f172a] text-white shadow-sm"
+                      : "text-[#64748b] hover:text-[#0f172a]"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))} */}
+              {/* {modifyResult && (
+                <button
+                  onClick={() => setActiveTab("DIFF")}
+                  className={`px-4 py-1.5 mr-0.5 text-[14px] font-medium rounded-full transition-all flex items-center gap-1.5 ${
+                    activeTab === "DIFF"
+                      ? "bg-[#0f172a] text-white shadow-sm"
+                      : "text-[#64748b] hover:text-[#0f172a]"
+                  }`}
+                >
+                  DIFF
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                </button>
+              )} */}
+            </div>
+
+            <button className="w-8 h-8 rounded-full border border-[#e4eaf2] flex items-center justify-center hover:bg-[#f8fafc] transition-colors">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0.5" y="0.5" width="39" height="39" rx="14.5" fill="white"/>
+                <rect x="0.5" y="0.5" width="39" height="39" rx="14.5" stroke="#8559EC"/>
+                <path d="M19.3858 21.6747C19.6796 21.3827 19.6811 20.9079 19.3891 20.6141C19.0971 20.3203 18.6222 20.3189 18.3284 20.6109L18.8571 21.1428L19.3858 21.6747ZM12.6509 26.5637C12.6497 26.9779 12.9844 27.3148 13.3987 27.316L20.1486 27.3365C20.5628 27.3377 20.8996 27.003 20.9009 26.5887C20.9022 26.1745 20.5674 25.8377 20.1532 25.8365L14.1532 25.8183L14.1714 19.8183C14.1726 19.4041 13.8379 19.0673 13.4237 19.066C13.0095 19.0648 12.6727 19.3996 12.6714 19.8138L12.6509 26.5637ZM18.8571 21.1428L18.3284 20.6109L12.8722 26.0341L13.4009 26.566L13.9296 27.0979L19.3858 21.6747L18.8571 21.1428Z" fill="#8559EC"/>
+                <path d="M20.8716 18.0341C20.578 18.3263 20.5769 18.8012 20.869 19.0948C21.1612 19.3884 21.6361 19.3896 21.9297 19.0974L21.4007 18.5658L20.8716 18.0341ZM27.5999 13.1447C27.601 12.7305 27.266 12.3939 26.8518 12.3929L20.1018 12.3765C19.6876 12.3755 19.351 12.7105 19.35 13.1247C19.349 13.5389 19.6839 13.8755 20.0981 13.8765L26.0981 13.8911L26.0835 19.8911C26.0825 20.3053 26.4175 20.6419 26.8317 20.6429C27.2459 20.6439 27.5825 20.3089 27.5835 19.8947L27.5999 13.1447ZM21.4007 18.5658L21.9297 19.0974L27.379 13.6745L26.8499 13.1429L26.3209 12.6113L20.8716 18.0341L21.4007 18.5658Z" fill="#8559EC"/>
+              </svg>
+            </button>
+          </div>
+          
+          <div className="flex-1 flex items-center justify-center px-6 pt-5 pb-8 overflow-hidden">
+            {activeTab === "PREVIEW" && (
+              /* iPhone Frame */
+              <div className="w-[453px] h-[877px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl">
+                <div className="w-full h-full bg-[#f5f5f5] rounded-[32px] relative overflow-hidden">
+                  {/* Notch */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-[#1a1a1a] rounded-b-2xl" />
+                  
+                  {/* Screen Content */}
+                  <div className="w-full h-full overflow-y-auto px-5 pt-10 pb-6">
+                    {!hierarchy?.components?.length ? (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <p className="text-[13px] text-[#94a3b8]">프리뷰 준비 완료</p>
+                          <p className="text-[14px] text-[#cbd5f5] mt-2">시나리오 트리 분석을 실행하세요</p>
                         </div>
                       </div>
-                    </div>
-
-                    {/* LLM 생성 HTML 와이어프레임 — iframe으로 안전하게 렌더링 */}
-                    {previewHtml ? (
+                    ) : previewHtml ? (
                       <iframe
                         ref={iframeRef}
                         srcDoc={previewHtml}
                         sandbox="allow-same-origin allow-scripts"
-                        style={{ width: "370px", height: "700px", border: "none", display: "block", overflowX: "hidden" }}
+                        style={{ width: "100%", height: "100%", border: "none", display: "block", overflowX: "hidden" }}
                         scrolling="auto"
                         title="페이지 구조 미리보기"
                         onLoad={() => {
@@ -812,250 +857,261 @@ export default function WorkspacePage() {
                         {hierarchy.components.map((comp) => renderPreviewSection(comp, 0))}
                       </div>
                     )}
-
-                    {/* 홈 인디케이터 */}
-                    <div className="flex justify-center py-2 bg-white">
-                      <div className="w-[130px] h-[5px] bg-[#1c1c1e] rounded-full" />
-                    </div>
+                  </div>
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+                    <div className="w-[100px] h-[4px] bg-[#1a1a1a] rounded-full" />
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {rightTab === "CODE" && (
-            <>
-              {selection?.type === "area" ? (
-                <pre className="text-[12px] leading-relaxed text-[#0f172a] font-mono whitespace-pre-wrap bg-white border border-[#e4eaf2] rounded-xl p-5 min-h-full">
-                  {selectedCode || "코드가 없습니다."}
-                </pre>
-              ) : selection?.type === "component" ? (
-                <div className="space-y-4">
-                  <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
-                    <p className="text-[12px] font-semibold text-[#0f172a] mb-1">{selection.data.name}</p>
-                    <p className="text-[11px] text-[#94a3b8] mb-3">{selection.data.source_file}</p>
-                    <p className="text-[13px] text-[#475569] leading-relaxed">
-                      {Array.isArray(selection.data.description)
-                        ? selection.data.description.join(" ")
-                        : selection.data.description}
-                    </p>
-                  </div>
-
-                  {(selection.data.children?.length ?? 0) > 0 && (
-                    <>
-                      <p className="text-[11px] text-[#94a3b8] px-1">하위 컴포넌트 ({selection.data.children.length}개)</p>
-                      {selection.data.children.map((child) => (
-                        <div
-                          key={child.id}
-                          onClick={() => setSelection({ type: "component", data: child })}
-                          className="bg-white border border-[#e4eaf2] rounded-xl p-4 cursor-pointer hover:border-[#a78bfa] transition-colors"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="w-1.5 h-1.5 rounded-sm bg-[#a78bfa]" />
-                            <p className="text-[12px] font-medium text-[#0f172a]">{child.name}</p>
-                            <span className="text-[10px] text-[#94a3b8] ml-auto">{child.source_file}</span>
-                          </div>
-                          <p className="text-[12px] text-[#64748b] leading-relaxed pl-3.5">
-                            {Array.isArray(child.description) ? child.description.join(" ") : child.description}
-                          </p>
-                        </div>
-                      ))}
-                    </>
-                  )}
-
-                  {selection.data.areas.length > 0 && (
-                    <>
-                      <p className="text-[11px] text-[#94a3b8] px-1">하위 영역 ({selection.data.areas.length}개)</p>
-                      {selection.data.areas.map((area) => (
-                        <div
-                          key={area.id}
-                          onClick={() => setSelection({ type: "area", data: area, parentComponent: selection.data })}
-                          className="bg-white border border-[#e4eaf2] rounded-xl p-4 cursor-pointer hover:border-[#8b5cf6] transition-colors"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-                            <p className="text-[12px] font-medium text-[#0f172a]">{area.name}</p>
-                            <span className="text-[10px] text-[#94a3b8] ml-auto">{area.source_file}</span>
-                          </div>
-                          <p className="text-[12px] text-[#64748b] leading-relaxed pl-3.5">
-                            {Array.isArray(area.description) ? area.description.join(" ") : area.description}
-                          </p>
-                        </div>
-                      ))}
-                    </>
-                  )}
+            {activeTab === "FLOW" && (
+              <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
+                <div className="flex items-center gap-2 mb-8">
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="3" cy="3" r="2.5" stroke="#8B5CF6" strokeLinejoin="round"/>
+                    <circle cx="15" cy="3" r="2.5" stroke="#8B5CF6" strokeLinejoin="round"/>
+                    <path d="M9 1.5V16.5M3 5.875V10.875M15 5.875V9.625C15 10.0417 14.55 11 12.75 11.5" stroke="#8B5CF6" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="3" cy="13.5" r="2.5" stroke="#8B5CF6" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="text-[16px] font-semibold text-[#0f172a]">Business Flow</span>
                 </div>
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <p className="text-[13px] text-[#94a3b8]">
-                    {hierarchy ? "트리에서 항목을 선택하세요." : "레포지토리를 분석하세요."}
-                  </p>
-                </div>
-              )}
-            </>
-          )}
 
-          {rightTab === "DIFF" && modifyResult && (
-            <div>
-              {/* 파일명 헤더 */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca]">
-                  <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
-                  <span className="text-[11px] font-medium text-[#ef4444]">Before</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0fdf4] border border-[#bbf7d0]">
-                  <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
-                  <span className="text-[11px] font-medium text-[#22c55e]">After</span>
-                </div>
-                <span className="text-[11px] text-[#94a3b8] ml-auto font-mono">
-                  {modifyResult.source_file}
-                </span>
-              </div>
-
-              {/* Diff Viewer */}
-              <div className="rounded-xl overflow-hidden border border-[#e4eaf2] text-[12px]">
-                <ReactDiffViewer
-                  oldValue={modifyResult.original_code}
-                  newValue={modifyResult.modified_code}
-                  splitView={true}
-                  leftTitle="Before"
-                  rightTitle="After"
-                  useDarkTheme={false}
-                  hideLineNumbers={false}
-                  styles={{
-                    variables: {
-                      light: {
-                        diffViewerBackground: "#ffffff",
-                        addedBackground: "#f0fdf4",
-                        addedColor: "#166534",
-                        removedBackground: "#fef2f2",
-                        removedColor: "#991b1b",
-                        wordAddedBackground: "#bbf7d0",
-                        wordRemovedBackground: "#fecaca",
-                        addedGutterBackground: "#dcfce7",
-                        removedGutterBackground: "#fee2e2",
-                        gutterBackground: "#f8fafc",
-                        gutterBackgroundDark: "#f1f5f9",
-                        highlightBackground: "#fefce8",
-                        highlightGutterBackground: "#fef9c3",
-                        codeFoldBackground: "#f1f5f9",
-                        emptyLineBackground: "#f8fafc",
-                        codeFoldContentColor: "#94a3b8",
-                        diffViewerTitleBackground: "#f8fafc",
-                        diffViewerTitleColor: "#0f172a",
-                        diffViewerTitleBorderColor: "#e4eaf2",
-                      },
-                    },
-                    line: { fontSize: "12px", fontFamily: "monospace" },
-                    gutter: { fontSize: "11px", minWidth: "40px" },
-                    titleBlock: { fontSize: "12px", fontWeight: "600" },
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {rightTab === "FLOW" && (
-            <div>
-              {flow ? (
-                <>
-                  <div className="flex items-center gap-2 mb-5">
-                    <GitMerge className="w-4 h-4 text-[#8b5cf6]" />
-                    <h2 className="text-[14px] font-semibold text-[#0f172a]">{flow.title}</h2>
-                    <span className="ml-auto text-[11px] text-[#94a3b8]">{flow.steps.length}단계</span>
-                  </div>
-                  {flowChangedSteps.length > 0 && (
-                    <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                      <span className="text-[11px] text-amber-700 font-medium">
-                        {flowChangedSteps.length}개 단계 수정됨 (step {flowChangedSteps.join(", ")})
-                      </span>
-                    </div>
-                  )}
-                  <ol className="relative border-l-2 border-[#e4eaf2] ml-3 space-y-0">
-                    {flow.steps.map((step) => {
-                      const isChanged = flowChangedSteps.includes(step.step)
-                      return (
-                        <li key={step.step} className="ml-6 pb-6 last:pb-0">
-                          {/* 타임라인 노드 */}
-                          <span className={`absolute -left-[13px] flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white text-white text-[10px] font-bold ${isChanged ? "bg-amber-500" : "bg-[#8b5cf6]"}`}>
-                            {step.step}
-                          </span>
-                          <div className={`border rounded-xl p-4 shadow-sm ${isChanged ? "bg-amber-50 border-amber-300" : "bg-white border-[#e4eaf2]"}`}>
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isChanged ? "text-amber-700 bg-amber-100" : "text-[#8b5cf6] bg-[#8b5cf6]/10"}`}>
-                                {step.component}
-                              </span>
-                              <span className="text-[10px] text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
-                                {step.area}
-                              </span>
-                              {isChanged && (
-                                <span className="ml-auto text-[10px] text-amber-600 font-semibold bg-amber-100 px-2 py-0.5 rounded-full">
-                                  ✦ 수정됨
-                                </span>
+                {flow ? (
+                  <>
+                    {flowChangedSteps.length > 0 && (
+                      <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                        <span className="text-[11px] text-amber-700 font-medium">
+                          {flowChangedSteps.length}개 단계 수정됨 (step {flowChangedSteps.join(", ")})
+                        </span>
+                      </div>
+                    )}
+                    <div className="space-y-6">
+                      {flow.steps.map((step) => {
+                        const isChanged = flowChangedSteps.includes(step.step)
+                        return (
+                          <div key={step.step} className="flex gap-4">
+                            <div className="flex flex-col items-center">
+                              <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-[13px] font-semibold ${isChanged ? "bg-amber-500" : "bg-[#8b5cf6]"}`}>
+                                {step.step}
+                              </div>
+                              {step.step < flow.steps.length && (
+                                <div className="w-0.5 flex-1 bg-[#e4eaf2] mt-2" />
                               )}
                             </div>
-                            <p className="text-[12px] text-[#0f172a] font-medium mb-1">
-                              {step.action}
-                            </p>
-                            <p className="text-[11px] text-[#64748b] flex items-start gap-1.5">
-                              <span className={`mt-0.5 w-3.5 h-3.5 rounded-full shrink-0 flex items-center justify-center text-[8px] font-bold ${isChanged ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"}`}>→</span>
-                              {step.result}
+                            <div className="flex-1 pb-6">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isChanged ? "text-amber-700 bg-amber-100" : "text-[#8b5cf6] bg-[#8b5cf6]/10"}`}>
+                                  {step.component}
+                                </span>
+                                <span className="text-[10px] text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
+                                  {step.area}
+                                </span>
+                                {isChanged && (
+                                  <span className="ml-auto text-[10px] text-amber-600 font-semibold bg-amber-100 px-2 py-0.5 rounded-full">
+                                    수정됨
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className={`text-[18px] font-semibold mb-2 ${isChanged ? "text-amber-600" : "text-[#0f172a]"}`}>{step.action}</h3>
+                              <p className="text-[13px] text-[#64748b] leading-relaxed">{step.result}</p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-[13px] text-[#94a3b8]">
+                      레포지토리를 분석하면 플로우가 생성됩니다.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === "DIAGRAM" && (
+              <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
+                <div className="flex items-center gap-2 mb-8">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6.5 16.0495C6.5 14.6858 5.38071 13.5804 4 13.5804C2.61929 13.5804 1.5 14.6858 1.5 16.0495C1.5 17.4132 2.61929 18.5186 4 18.5186V20.0001C1.79086 20.0001 0 18.2314 0 16.0495C0 13.8676 1.79086 12.0989 4 12.0989C6.20914 12.0989 8 13.8676 8 16.0495C8 18.2314 6.20914 20.0001 4 20.0001V18.5186C5.38071 18.5186 6.5 17.4132 6.5 16.0495Z" fill="#8B5CF6"/>
+                    <path d="M18.5 4.19744C18.5 2.83378 17.3807 1.72831 16 1.72831C14.6193 1.72831 13.5 2.83378 13.5 4.19744C13.5 5.56111 14.6193 6.66658 16 6.66658V8.14806C13.7909 8.14806 12 6.37931 12 4.19744C12 2.01558 13.7909 0.246826 16 0.246826C18.2091 0.246826 20 2.01558 20 4.19744C20 6.37931 18.2091 8.14806 16 8.14806V6.66658C17.3807 6.66658 18.5 5.56111 18.5 4.19744Z" fill="#8B5CF6"/>
+                    <path d="M16.75 6.66667C16.75 9.89105 15.1989 12.2673 13.293 13.8397C11.4098 15.3933 9.13466 16.2029 7.54395 16.2953L7.45605 14.8158C8.69868 14.7436 10.6736 14.0717 12.332 12.7035C13.9677 11.3541 15.25 9.36821 15.25 6.66667H16.75ZM3.25 0.740741C3.25 0.331641 3.58579 0 4 0C4.41421 0 4.75 0.331641 4.75 0.740741V12.5926H3.25V0.740741Z" fill="#8B5CF6"/>
+                  </svg>
+                  <span className="text-[16px] font-semibold text-[#0f172a]">시스템 아키텍쳐 다이어그램</span>
+                  {diagramChangedNodes.length > 0 && (
+                    <span className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      {diagramChangedNodes.length}개 노드 수정됨
+                    </span>
+                  )}
+                </div>
+
+                {diagram ? (
+                  <>
+                    <MermaidDiagram chart={diagram} />
+                    <details className="mt-4">
+                      <summary className="text-[11px] text-[#94a3b8] cursor-pointer hover:text-[#64748b] select-none">
+                        Mermaid 원본 보기
+                      </summary>
+                      <pre className="mt-2 text-[11px] leading-relaxed font-mono text-[#475569] bg-white border border-[#e4eaf2] rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">
+                        {diagram}
+                      </pre>
+                    </details>
+                  </>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-[13px] text-[#94a3b8]">
+                      레포지토리를 분석하면 다이어그램이 생성됩니다.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* {activeTab === "CODE" && (
+              <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
+                <div className="flex items-center gap-2 mb-6">
+                  <svg width="22" height="13" viewBox="0 0 22 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M15.079 0.244008C15.4545 -0.102476 16.0382 -0.0768776 16.3823 0.301135L22 6.47086L16.8723 12.666C16.5462 13.0598 15.9639 13.113 15.5726 12.7848C15.1814 12.4564 15.1286 11.8702 15.4546 11.4763L19.5492 6.52798L15.0223 1.55612C14.6781 1.17809 14.7036 0.59052 15.079 0.244008ZM5.64377 0.301135C5.98796 -0.0768777 6.57159 -0.102477 6.94708 0.244008C7.32256 0.59052 7.34799 1.17809 7.00383 1.55612L2.50214 6.49987L7.00383 11.4436C7.34799 11.8217 7.32256 12.4092 6.94708 12.7557C6.57159 13.1022 5.98796 13.0766 5.64377 12.6986L0 6.49987L5.64377 0.301135Z" fill="#8B5CF6"/>
+                    <path d="M12.2949 0.744101C12.4364 0.354983 12.8667 0.153661 13.2558 0.294882C13.6449 0.43638 13.8463 0.866669 13.705 1.25582L9.70504 12.2558C9.56354 12.6449 9.13325 12.8463 8.7441 12.705C8.35498 12.5635 8.15366 12.1333 8.29488 11.7441L12.2949 0.744101Z" fill="#8B5CF6"/>
+                  </svg>
+                  <span className="text-[16px] font-semibold text-[#0f172a]">Spec Overview</span>
+                </div>
+
+                {selection?.type === "area" ? (
+                  <pre className="text-[12px] leading-relaxed text-[#0f172a] font-mono whitespace-pre-wrap bg-white border border-[#e4eaf2] rounded-xl p-5 min-h-full">
+                    {selectedCode || "코드가 없습니다."}
+                  </pre>
+                ) : selection?.type === "component" ? (
+                  <div className="space-y-4">
+                    <div className="bg-white border border-[#e4eaf2] rounded-xl p-5">
+                      <p className="text-[12px] font-semibold text-[#0f172a] mb-1">{selection.data.name}</p>
+                      <p className="text-[11px] text-[#94a3b8] mb-3">{selection.data.source_file}</p>
+                      <p className="text-[13px] text-[#475569] leading-relaxed">
+                        {Array.isArray(selection.data.description)
+                          ? selection.data.description.join(" ")
+                          : selection.data.description}
+                      </p>
+                    </div>
+
+                    {(selection.data.children?.length ?? 0) > 0 && (
+                      <>
+                        <p className="text-[11px] text-[#94a3b8] px-1">하위 컴포넌트 ({selection.data.children.length}개)</p>
+                        {selection.data.children.map((child) => (
+                          <div
+                            key={child.id}
+                            onClick={() => setSelection({ type: "component", data: child })}
+                            className="bg-white border border-[#e4eaf2] rounded-xl p-4 cursor-pointer hover:border-[#a78bfa] transition-colors"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="w-1.5 h-1.5 rounded-sm bg-[#a78bfa]" />
+                              <p className="text-[12px] font-medium text-[#0f172a]">{child.name}</p>
+                              <span className="text-[10px] text-[#94a3b8] ml-auto">{child.source_file}</span>
+                            </div>
+                            <p className="text-[12px] text-[#64748b] leading-relaxed pl-3.5">
+                              {Array.isArray(child.description) ? child.description.join(" ") : child.description}
                             </p>
                           </div>
-                        </li>
-                      )
-                    })}
-                  </ol>
-                </>
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <p className="text-[13px] text-[#94a3b8]">
-                    레포지토리를 분석하면 플로우가 생성됩니다.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {rightTab === "DIAGRAM" && (
-            <div>
-              {diagram ? (
-                <>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Share2 className="w-4 h-4 text-[#3b82f6]" />
-                    <h2 className="text-[14px] font-semibold text-[#0f172a]">컴포넌트 구조 다이어그램</h2>
-                    {diagramChangedNodes.length > 0 && (
-                      <span className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        {diagramChangedNodes.length}개 노드 수정됨
-                      </span>
+                        ))}
+                      </>
                     )}
-                    {hierarchy?.repository && (
-                      <span className="ml-auto text-[11px] text-[#94a3b8] font-mono">{hierarchy.repository}</span>
+
+                    {selection.data.areas.length > 0 && (
+                      <>
+                        <p className="text-[11px] text-[#94a3b8] px-1">하위 영역 ({selection.data.areas.length}개)</p>
+                        {selection.data.areas.map((area) => (
+                          <div
+                            key={area.id}
+                            onClick={() => setSelection({ type: "area", data: area, parentComponent: selection.data })}
+                            className="bg-white border border-[#e4eaf2] rounded-xl p-4 cursor-pointer hover:border-[#8b5cf6] transition-colors"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                              <p className="text-[12px] font-medium text-[#0f172a]">{area.name}</p>
+                              <span className="text-[10px] text-[#94a3b8] ml-auto">{area.source_file}</span>
+                            </div>
+                            <p className="text-[12px] text-[#64748b] leading-relaxed pl-3.5">
+                              {Array.isArray(area.description) ? area.description.join(" ") : area.description}
+                            </p>
+                          </div>
+                        ))}
+                      </>
                     )}
                   </div>
-                  <MermaidDiagram chart={diagram} />
-                  {/* 원본 Mermaid 텍스트 (접이식) */}
-                  <details className="mt-4">
-                    <summary className="text-[11px] text-[#94a3b8] cursor-pointer hover:text-[#64748b] select-none">
-                      Mermaid 원본 보기
-                    </summary>
-                    <pre className="mt-2 text-[11px] leading-relaxed font-mono text-[#475569] bg-[#f8fafc] border border-[#e4eaf2] rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">
-                      {diagram}
-                    </pre>
-                  </details>
-                </>
-              ) : (
-                <div className="h-full flex items-center justify-center">
-                  <p className="text-[13px] text-[#94a3b8]">
-                    레포지토리를 분석하면 다이어그램이 생성됩니다.
-                  </p>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-[13px] text-[#94a3b8]">
+                      {hierarchy ? "트리에서 항목을 선택하세요." : "레포지토리를 분석하세요."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )} */}
+
+            {activeTab === "DIFF" && (
+              <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
+                {/* 파일명 헤더 */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca]">
+                    <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
+                    <span className="text-[11px] font-medium text-[#ef4444]">Before</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0fdf4] border border-[#bbf7d0]">
+                    <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+                    <span className="text-[11px] font-medium text-[#22c55e]">After</span>
+                  </div>
+                  <span className="text-[11px] text-[#94a3b8] ml-auto font-mono">
+                    {modifyResult.source_file}
+                  </span>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+
+                {/* Diff Viewer */}
+                <div className="rounded-xl overflow-hidden border border-[#e4eaf2] text-[12px]">
+                  <ReactDiffViewer
+                    oldValue={modifyResult.original_code}
+                    newValue={modifyResult.modified_code}
+                    splitView={true}
+                    leftTitle="Before"
+                    rightTitle="After"
+                    useDarkTheme={false}
+                    hideLineNumbers={false}
+                    styles={{
+                      variables: {
+                        light: {
+                          diffViewerBackground: "#ffffff",
+                          addedBackground: "#f0fdf4",
+                          addedColor: "#166534",
+                          removedBackground: "#fef2f2",
+                          removedColor: "#991b1b",
+                          wordAddedBackground: "#bbf7d0",
+                          wordRemovedBackground: "#fecaca",
+                          addedGutterBackground: "#dcfce7",
+                          removedGutterBackground: "#fee2e2",
+                          gutterBackground: "#f8fafc",
+                          gutterBackgroundDark: "#f1f5f9",
+                          highlightBackground: "#fefce8",
+                          highlightGutterBackground: "#fef9c3",
+                          codeFoldBackground: "#f1f5f9",
+                          emptyLineBackground: "#f8fafc",
+                          codeFoldContentColor: "#94a3b8",
+                          diffViewerTitleBackground: "#f8fafc",
+                          diffViewerTitleColor: "#0f172a",
+                          diffViewerTitleBorderColor: "#e4eaf2",
+                        },
+                      },
+                      line: { fontSize: "12px", fontFamily: "monospace" },
+                      gutter: { fontSize: "11px", minWidth: "40px" },
+                      titleBlock: { fontSize: "12px", fontWeight: "600" },
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   )
