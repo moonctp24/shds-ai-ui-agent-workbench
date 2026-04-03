@@ -128,6 +128,19 @@ type SelectionTarget =
   | { type: "area"; data: Area; parentComponent: Component }
   | null
 
+/** 컴포넌트와 모든 하위 자손의 area.code를 재귀적으로 수집해 하나의 문자열로 반환 */
+const collectAreaCodes = (comp: Component): string => {
+  const parts: string[] = []
+  for (const area of comp.areas ?? []) {
+    if (area.code) parts.push(`// [${comp.name} > ${area.name}]\n${area.code}`)
+  }
+  for (const child of comp.children ?? []) {
+    const childCode = collectAreaCodes(child)
+    if (childCode) parts.push(childCode)
+  }
+  return parts.join("\n\n")
+}
+
 // ─── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
 const INITIAL_DATA = ((analysisData as any).data ?? analysisData) as Hierarchy
@@ -211,10 +224,13 @@ export default function WorkspacePage() {
     try {
       const data = selection.data
       const isArea = selection.type === "area"
+      const origCode = isArea
+        ? (data as any).code ?? ""
+        : collectAreaCodes(data as Component)
       const res = await api.post("/api/modify-code", {
         area_id: data.id,
         source_file: data.source_file,
-        original_code: isArea ? (data as any).code : undefined,
+        original_code: origCode,
         modification_request: modificationRequest,
         original_flow: flow ?? undefined,
         original_diagram: diagram ?? undefined,
@@ -261,8 +277,10 @@ export default function WorkspacePage() {
   }, [selection])
 
   const selectedCode = useMemo(() => {
-    if (selection?.type !== "area") return ""
-    return modifyResult ? modifyResult.original_code : selection.data.code
+    if (!selection) return ""
+    if (modifyResult) return modifyResult.original_code
+    if (selection.type === "area") return selection.data.code
+    return collectAreaCodes(selection.data)
   }, [selection, modifyResult])
 
   // ─── PREVIEW 와이어프레임 헬퍼 ──────────────────────────────────────────────
