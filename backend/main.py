@@ -8,7 +8,6 @@ load_dotenv(override=True)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api.analyze import router as analyze_router
 from backend.app.api.modify import router as modify_router
 
 app = FastAPI(title="AI UI Agent Backend", version="0.1.0")
@@ -25,7 +24,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(analyze_router, prefix="/api")
 app.include_router(modify_router, prefix="/api")
 
 

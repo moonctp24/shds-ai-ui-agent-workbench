@@ -108,6 +108,7 @@ type Hierarchy = {
   components: Component[]
   flow?: Flow
   diagram?: string
+  preview_html?: string
 }
 
 type ModifyResult = {
@@ -129,7 +130,7 @@ type SelectionTarget =
 
 // ─── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
-const INITIAL_DATA = analysisData as unknown as Hierarchy
+const INITIAL_DATA = ((analysisData as any).data ?? analysisData) as Hierarchy
 
 export default function WorkspacePage() {
   const [minorVersion, setMinorVersion] = useState(0)   // v1.0 → v1.1 → …
@@ -159,8 +160,10 @@ export default function WorkspacePage() {
 
   const [flow, setFlow] = useState<Flow | null>(INITIAL_DATA.flow ?? null)
   const [diagram, setDiagram] = useState<string | null>(INITIAL_DATA.diagram ?? null)
+  const [previewHtml, setPreviewHtml] = useState<string | null>(INITIAL_DATA.preview_html ?? null)
   const [flowChangedSteps, setFlowChangedSteps] = useState<number[]>([])
   const [diagramChangedNodes, setDiagramChangedNodes] = useState<string[]>([])
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // 영역/컴포넌트 선택 변경 시 수정 결과·체크박스·편집내역·추가항목 초기화 (탭은 유지)
   useEffect(() => {
@@ -171,10 +174,16 @@ export default function WorkspacePage() {
     setAddedItems([])
   }, [selection])
 
+  // 트리에서 항목 선택 시 preview iframe 하이라이트 동기화
+  useEffect(() => {
+    const id = selection ? (selection.data as { id?: string }).id ?? null : null
+    iframeRef.current?.contentWindow?.postMessage({ type: "highlight", id }, "*")
+  }, [selection])
+
   // ─── 핸들러 ──────────────────────────────────────────────────────────────────
 
   const handleModify = async () => {
-    if (selection?.type !== "area") return
+    if (!selection) return
     if (isModifyingRef.current) return   // 이미 요청 중이면 즉시 차단
     isModifyingRef.current = true
 
@@ -189,6 +198,7 @@ export default function WorkspacePage() {
 
     if (checkedTexts.length === 0 && addedTexts.length === 0) {
       setModifyError("수정할 항목을 선택하거나 추가해주세요.")
+      isModifyingRef.current = false
       return
     }
 
@@ -199,11 +209,12 @@ export default function WorkspacePage() {
     setModifyResult(null)
 
     try {
-      const area = selection.data
+      const data = selection.data
+      const isArea = selection.type === "area"
       const res = await api.post("/api/modify-code", {
-        area_id: area.id,
-        source_file: area.source_file,
-        original_code: area.code,
+        area_id: data.id,
+        source_file: data.source_file,
+        original_code: isArea ? (data as any).code : undefined,
         modification_request: modificationRequest,
         original_flow: flow ?? undefined,
         original_diagram: diagram ?? undefined,
@@ -373,8 +384,7 @@ export default function WorkspacePage() {
     const isExpanded = expandedComponents.includes(comp.id)
     const isCompSelected = selection?.type === "component" && selection.data.id === comp.id
     const hasChildren = (comp.children?.length ?? 0) > 0
-    const hasAreas = comp.areas.length > 0
-    const isExpandable = hasChildren || hasAreas
+    const isExpandable = hasChildren   // areas는 트리에 노출하지 않음
     const indentPx = depth * 14
 
     const dotColor =
@@ -386,7 +396,6 @@ export default function WorkspacePage() {
           onClick={() => {
             if (isExpandable) toggleComponent(comp.id)
             setSelection({ type: "component", data: comp })
-            setRightTab("CODE")
           }}
           style={{ paddingLeft: `${16 + indentPx}px` }}
           className={`flex items-center gap-2 py-2.5 pr-4 cursor-pointer transition-colors ${
@@ -416,32 +425,7 @@ export default function WorkspacePage() {
         </div>
 
         {isExpanded && (
-          <>
-            {comp.children?.map(child => renderComponentNode(child, depth + 1))}
-            {comp.areas.map(area => {
-              const isAreaSelected = selection?.type === "area" && selection.data.id === area.id
-              return (
-                <div
-                  key={area.id}
-                  onClick={() => {
-                    setSelection({ type: "area", data: area, parentComponent: comp })
-                    setRightTab("CODE")
-                  }}
-                  style={{ paddingLeft: `${40 + indentPx}px` }}
-                  className={`flex items-center gap-2 pr-4 py-2 cursor-pointer transition-colors ${
-                    isAreaSelected
-                      ? "bg-[#8b5cf6] text-white"
-                      : "hover:bg-[#f1f5f9] text-[#475569]"
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    isAreaSelected ? "bg-white" : "bg-[#8b5cf6]"
-                  }`} />
-                  <span className="text-[12px] truncate">{area.name}</span>
-                </div>
-              )
-            })}
-          </>
+          <>{comp.children?.map(child => renderComponentNode(child, depth + 1))}</>
         )}
       </div>
     )
@@ -474,32 +458,42 @@ export default function WorkspacePage() {
         </div>
 
 
-        {/* 좌측 중단: 선택된 컴포넌트/영역 설명 (체크 → 인라인 편집) */}
+        {/* 좌측 중단: 영역 분석 결과 */}
         <div className="flex-1 px-4 py-4 border-b border-white/10 overflow-y-auto">
           <p className="text-[10px] text-white/50 uppercase tracking-widest mb-3">
-            {selection?.type === "area" ? "영역 분석 결과" : "컴포넌트 분석 결과"}
+            영역 분석 결과
           </p>
-          {selectedDescription && selectedDescription.length > 0 ? (
+
+          {!selection || selection.type !== "component" ? (
+            /* 미선택 */
+            <p className="text-[12px] text-white/30">항목을 선택하세요.</p>
+          ) : (selection.data.children?.length ?? 0) > 0 ? (
+            /* 비리프 comp (자식 있음) → description 줄글 */
+            <p className="text-[12px] text-white/60 leading-relaxed">
+              {Array.isArray(selection.data.description)
+                ? selection.data.description.join(" ")
+                : (selection.data.description ?? "")}
+            </p>
+          ) : selection.data.areas.length > 0 ? (
+            /* 리프 comp (자식 없음, areas 있음) → area name 체크박스 리스트 */
             <>
               <p className="text-[10px] text-white/30 mb-3">항목을 선택하면 직접 편집할 수 있습니다.</p>
               <ul className="space-y-2">
-                {selectedDescription.map((sentence, idx) => {
-                  const key = `${selection?.data?.id}-${idx}`
+                {selection.data.areas.map((area) => {
+                  const key = area.id
                   const checked = checkedDescriptions[key] ?? false
-                  const editedText = editedDescriptions[key] ?? sentence
+                  const editedText = editedDescriptions[key] ?? area.name
 
                   const toggleCheck = () => {
                     const next = !checked
                     setCheckedDescriptions(prev => ({ ...prev, [key]: next }))
                     if (next) {
-                      // 체크 시 원본 텍스트로 편집 초기화
-                      setEditedDescriptions(prev => ({ ...prev, [key]: sentence }))
+                      setEditedDescriptions(prev => ({ ...prev, [key]: area.name }))
                     } else {
-                      // 해제 시 편집 내역 삭제 (원본 복구)
                       setEditedDescriptions(prev => {
-                        const next = { ...prev }
-                        delete next[key]
-                        return next
+                        const n = { ...prev }
+                        delete n[key]
+                        return n
                       })
                     }
                   }
@@ -533,7 +527,7 @@ export default function WorkspacePage() {
                             htmlFor={key}
                             className="flex-1 text-[12px] leading-relaxed text-white/60 cursor-pointer select-none"
                           >
-                            {sentence}
+                            {area.name}
                           </label>
                         )}
                       </div>
@@ -543,8 +537,11 @@ export default function WorkspacePage() {
               </ul>
             </>
           ) : (
-            <p className="text-[12px] text-white/30">
-              {hierarchy ? "항목을 선택하세요." : "레포지토리를 분석하면 결과가 표시됩니다."}
+            /* 리프 comp인데 areas도 없는 경우 → description 줄글 */
+            <p className="text-[12px] text-white/60 leading-relaxed">
+              {Array.isArray(selection.data.description)
+                ? selection.data.description.join(" ")
+                : (selection.data.description ?? "설명이 없습니다.")}
             </p>
           )}
 
@@ -601,7 +598,7 @@ export default function WorkspacePage() {
 
         {/* 좌측 하단: 기획 수정 버튼 */}
         <div className="px-4 py-4">
-          {selection?.type === "area" ? (
+          {selection ? (
             <>
               <button
                 onClick={handleModify}
@@ -620,7 +617,7 @@ export default function WorkspacePage() {
             </>
           ) : (
             <p className="text-[12px] text-white/30">
-              영역(Area)을 선택하면 기획서 수정이 가능합니다.
+              항목을 선택하면 기획서 수정이 가능합니다.
             </p>
           )}
         </div>
@@ -698,17 +695,6 @@ export default function WorkspacePage() {
             )}
           </button>
           <button
-            onClick={() => setRightTab("CODE")}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors ${
-              rightTab === "CODE"
-                ? "bg-[#0f172a] text-white"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            CODE
-          </button>
-          <button
             onClick={() => setRightTab("DIFF")}
             disabled={!modifyResult}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
@@ -737,27 +723,12 @@ export default function WorkspacePage() {
 
           {rightTab === "PREVIEW" && (
             <div className="flex flex-col items-center">
-              {/* 타이틀 + 범례 */}
+              {/* 타이틀 */}
               <div className="w-full max-w-[390px] mb-4">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-4">
                   <Monitor className="w-4 h-4 text-[#0ea5e9]" />
                   <h2 className="text-[14px] font-semibold text-[#0f172a]">페이지 구조 미리보기</h2>
                   <span className="ml-auto text-[11px] text-[#94a3b8] font-mono">{hierarchy.repository}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {(["button","banner","nav","input","list","card","default"] as const).map((t) => {
-                    const s = AREA_STYLE_MAP[t]
-                    const labels: Record<string, string> = {
-                      button:"버튼", banner:"이미지/배너", nav:"내비/메뉴",
-                      input:"입력/검색", list:"목록", card:"카드", default:"기타 UI"
-                    }
-                    return (
-                      <span key={t} className="flex items-center gap-1">
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${s.tagCls} text-white`}>{s.tag}</span>
-                        <span className="text-[10px] text-[#94a3b8]">{labels[t]}</span>
-                      </span>
-                    )
-                  })}
                 </div>
               </div>
 
@@ -803,10 +774,26 @@ export default function WorkspacePage() {
                       </div>
                     </div>
 
-                    {/* 페이지 컨텐츠 (스크롤) */}
-                    <div className="overflow-y-auto" style={{ maxHeight: "700px" }}>
-                      {hierarchy.components.map((comp) => renderPreviewSection(comp, 0))}
-                    </div>
+                    {/* LLM 생성 HTML 와이어프레임 — iframe으로 안전하게 렌더링 */}
+                    {previewHtml ? (
+                      <iframe
+                        ref={iframeRef}
+                        srcDoc={previewHtml}
+                        sandbox="allow-same-origin allow-scripts"
+                        style={{ width: "370px", height: "700px", border: "none", display: "block", overflowX: "hidden" }}
+                        scrolling="auto"
+                        title="페이지 구조 미리보기"
+                        onLoad={() => {
+                          const id = selection ? (selection.data as { id?: string }).id ?? null : null
+                          iframeRef.current?.contentWindow?.postMessage({ type: "highlight", id }, "*")
+                        }}
+                      />
+                    ) : (
+                      /* 폴백 — 컴포넌트 기반 와이어프레임 */
+                      <div className="overflow-y-auto" style={{ maxHeight: "700px" }}>
+                        {hierarchy.components.map((comp) => renderPreviewSection(comp, 0))}
+                      </div>
+                    )}
 
                     {/* 홈 인디케이터 */}
                     <div className="flex justify-center py-2 bg-white">
