@@ -384,8 +384,7 @@ export default function WorkspacePage() {
     const isExpanded = expandedComponents.includes(comp.id)
     const isCompSelected = selection?.type === "component" && selection.data.id === comp.id
     const hasChildren = (comp.children?.length ?? 0) > 0
-    const hasAreas = comp.areas.length > 0
-    const isExpandable = hasChildren || hasAreas
+    const isExpandable = hasChildren   // areas는 트리에 노출하지 않음
     const indentPx = depth * 14
 
     const dotColor =
@@ -426,31 +425,7 @@ export default function WorkspacePage() {
         </div>
 
         {isExpanded && (
-          <>
-            {comp.children?.map(child => renderComponentNode(child, depth + 1))}
-            {comp.areas.map(area => {
-              const isAreaSelected = selection?.type === "area" && selection.data.id === area.id
-              return (
-                <div
-                  key={area.id}
-                  onClick={() => {
-                    setSelection({ type: "area", data: area, parentComponent: comp })
-                  }}
-                  style={{ paddingLeft: `${40 + indentPx}px` }}
-                  className={`flex items-center gap-2 pr-4 py-2 cursor-pointer transition-colors ${
-                    isAreaSelected
-                      ? "bg-[#8b5cf6] text-white"
-                      : "hover:bg-[#f1f5f9] text-[#475569]"
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    isAreaSelected ? "bg-white" : "bg-[#8b5cf6]"
-                  }`} />
-                  <span className="text-[12px] truncate">{area.name}</span>
-                </div>
-              )
-            })}
-          </>
+          <>{comp.children?.map(child => renderComponentNode(child, depth + 1))}</>
         )}
       </div>
     )
@@ -483,32 +458,42 @@ export default function WorkspacePage() {
         </div>
 
 
-        {/* 좌측 중단: 선택된 컴포넌트/영역 설명 (체크 → 인라인 편집) */}
+        {/* 좌측 중단: 영역 분석 결과 */}
         <div className="flex-1 px-4 py-4 border-b border-white/10 overflow-y-auto">
           <p className="text-[10px] text-white/50 uppercase tracking-widest mb-3">
-            {selection?.type === "area" ? "영역 분석 결과" : "컴포넌트 분석 결과"}
+            영역 분석 결과
           </p>
-          {selectedDescription && selectedDescription.length > 0 ? (
+
+          {!selection || selection.type !== "component" ? (
+            /* 미선택 */
+            <p className="text-[12px] text-white/30">항목을 선택하세요.</p>
+          ) : (selection.data.children?.length ?? 0) > 0 ? (
+            /* 비리프 comp (자식 있음) → description 줄글 */
+            <p className="text-[12px] text-white/60 leading-relaxed">
+              {Array.isArray(selection.data.description)
+                ? selection.data.description.join(" ")
+                : (selection.data.description ?? "")}
+            </p>
+          ) : selection.data.areas.length > 0 ? (
+            /* 리프 comp (자식 없음, areas 있음) → area name 체크박스 리스트 */
             <>
               <p className="text-[10px] text-white/30 mb-3">항목을 선택하면 직접 편집할 수 있습니다.</p>
               <ul className="space-y-2">
-                {selectedDescription.map((sentence, idx) => {
-                  const key = `${selection?.data?.id}-${idx}`
+                {selection.data.areas.map((area) => {
+                  const key = area.id
                   const checked = checkedDescriptions[key] ?? false
-                  const editedText = editedDescriptions[key] ?? sentence
+                  const editedText = editedDescriptions[key] ?? area.name
 
                   const toggleCheck = () => {
                     const next = !checked
                     setCheckedDescriptions(prev => ({ ...prev, [key]: next }))
                     if (next) {
-                      // 체크 시 원본 텍스트로 편집 초기화
-                      setEditedDescriptions(prev => ({ ...prev, [key]: sentence }))
+                      setEditedDescriptions(prev => ({ ...prev, [key]: area.name }))
                     } else {
-                      // 해제 시 편집 내역 삭제 (원본 복구)
                       setEditedDescriptions(prev => {
-                        const next = { ...prev }
-                        delete next[key]
-                        return next
+                        const n = { ...prev }
+                        delete n[key]
+                        return n
                       })
                     }
                   }
@@ -542,7 +527,7 @@ export default function WorkspacePage() {
                             htmlFor={key}
                             className="flex-1 text-[12px] leading-relaxed text-white/60 cursor-pointer select-none"
                           >
-                            {sentence}
+                            {area.name}
                           </label>
                         )}
                       </div>
@@ -552,8 +537,11 @@ export default function WorkspacePage() {
               </ul>
             </>
           ) : (
-            <p className="text-[12px] text-white/30">
-              {hierarchy ? "항목을 선택하세요." : "레포지토리를 분석하면 결과가 표시됩니다."}
+            /* 리프 comp인데 areas도 없는 경우 → description 줄글 */
+            <p className="text-[12px] text-white/60 leading-relaxed">
+              {Array.isArray(selection.data.description)
+                ? selection.data.description.join(" ")
+                : (selection.data.description ?? "설명이 없습니다.")}
             </p>
           )}
 
