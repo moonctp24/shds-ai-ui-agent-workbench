@@ -707,17 +707,6 @@ export default function WorkspacePage() {
             )}
           </button>
           <button
-            onClick={() => setRightTab("CODE")}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors ${
-              rightTab === "CODE"
-                ? "bg-[#0f172a] text-white"
-                : "text-[#64748b] hover:text-[#0f172a]"
-            }`}
-          >
-            <Code2 className="w-3.5 h-3.5" />
-            CODE
-          </button>
-          <button
             onClick={() => setRightTab("DIFF")}
             disabled={!modifyResult}
             className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
