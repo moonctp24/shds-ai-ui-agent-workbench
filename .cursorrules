@@ -1,1 +1,5 @@
 프론트엔드는 3000번 포트, 백엔드는 8000번 포트를 사용하며 서로 CORS 허용이 필요함
+
+Never modify layout structure in page.tsx.
+Do not change any div structure or className.
+Only edit logic (state, hooks, API).
