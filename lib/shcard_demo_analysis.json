@@ -1,7 +1,7 @@
 {
   "type": "result",
   "data": {
-    "repository": "repo",
+    "repository": "shcard_demo",
     "components": [
       {
         "id": "comp-1",
@@ -15,11 +15,9 @@
             "component_name": "Header",
             "code": "        <Link href=\"/\" className=\"flex items-center gap-2\">\n          <div className=\"flex h-9 w-9 items-center justify-center rounded-full bg-shinhancard-blue text-white shadow-card\">\n            <CreditCard className=\"h-5 w-5\" />\n          </div>\n          <div className=\"flex flex-col leading-tight\">\n            <span className=\"text-sm font-semibold text-shinhancard-blue\">\n              신한카드\n            </span>\n            <span className=\"text-xs text-slate-500\">내 카드 관리</span>\n          </div>\n        </Link>",
             "description": [
-              "이 영역은 사이트의 로고와 브랜드명을 표시하여 브랜드 인식을 강화합니다.",
-              "좌측 상단에 위치하며 로고 이미지와 텍스트가 함께 보입니다.",
-              "사용자가 로고를 클릭하면 일반적으로 메인 페이지로 이동할 수 있습니다.",
-              "로고는 반응형 레이아웃에 따라 크기가 변하거나 숨겨질 수 있습니다.",
-              "헤더 내 내비게이션 메뉴와 나란히 배치되어 있습니다."
+              "신한카드 파란색(#003DA5) 원형 배경 안에 신용카드 아이콘이 들어가고, 우측에 '신한카드' 브랜드명과 '내 카드 관리' 서브타이틀이 세로로 표시됩니다.",
+              "클릭 시 메인 대시보드(/) 로 이동하는 Link 컴포넌트입니다.",
+              "로고와 텍스트는 gap-2 간격으로 가로 배치됩니다."
             ]
           },
           {
@@ -29,21 +27,17 @@
             "component_name": "Header",
             "code": "        <nav className=\"flex items-center gap-4 text-sm text-slate-600\">\n          <Link\n            href=\"/\"\n            className=\"rounded-full px-3 py-1 hover:bg-slate-100 hover:text-slate-900\"\n          >\n            대시보드\n          </Link>\n        </nav>",
             "description": [
-              "내비게이션 메뉴는 주요 페이지로 이동할 수 있는 링크들을 제공합니다.",
-              "가로로 정렬된 텍스트 버튼이나 아이콘 형태로 표시됩니다.",
-              "사용자는 각 메뉴를 클릭하여 다른 페이지로 이동할 수 있습니다.",
-              "현재 위치한 메뉴는 시각적으로 강조되어 표시됩니다.",
-              "헤더 내 로고 및 브랜드 옆에 배치됩니다."
+              "헤더 우측에 '대시보드' 링크 하나로 구성된 최소한의 네비게이션입니다.",
+              "rounded-full 스타일의 pill 형태로 표시되며, hover 시 배경색이 변합니다.",
+              "현재 버전에서는 대시보드 단일 메뉴만 존재합니다."
             ]
           }
         ],
         "children": [],
         "description": [
-          "헤더 컴포넌트는 사이트 상단에 위치하여 전체적인 내비게이션과 브랜드 인식을 담당합니다.",
-          "시각적으로 로고, 브랜드명, 내비게이션 메뉴 등이 가로로 나열된 레이아웃을 갖고 있습니다.",
-          "사용자는 내비게이션 메뉴를 이용해 주요 페이지로 이동할 수 있습니다.",
-          "스크롤 시 고정되거나 반응형으로 줄어드는 등 다양한 상태 변화가 있을 수 있습니다.",
-          "로고, 브랜드와 내비게이션 메뉴 등 여러 영역과 상호 연동되어 사이트의 중심 역할을 합니다."
+          "최상단 고정 헤더로 신한카드 로고(좌측)와 대시보드 네비게이션(우측)으로 구성됩니다.",
+          "배경은 흰색, 하단 경계선은 연한 slate 계열로 처리되어 콘텐츠와 분리됩니다.",
+          "어떤 페이지에서도 동일하게 표시되어 일관된 브랜드 경험을 제공합니다."
         ]
       },
       {
@@ -59,16 +53,14 @@
             "areas": [
               {
                 "id": "area-2-1-1",
-                "name": "요약 정보 카드",
+                "name": "이용 현황 배너",
                 "source_file": "src/app/page.tsx",
                 "component_name": "DashboardPage",
                 "code": "      <section className=\"card-shadow bg-gradient-to-r from-shinhancard-blue to-blue-500 p-5 text-white\">\n        <div className=\"flex flex-col gap-4 md:flex-row md:items-center md:justify-between\">\n          <div>\n            <h1 className=\"text-base font-semibold\">\n              내 카드 관리 대시보드\n            </h1>\n            <p className=\"mt-1 text-xs text-blue-100\">\n              보유 카드 현황과 결제 예정 금액을 한눈에 확인하세요.\n            </p>\n          </div>\n          <div className=\"grid gap-3 text-xs md:grid-cols-2\">\n            <div className=\"rounded-xl bg-white/10 px-4 py-3 backdrop-blur\">\n              <p className=\"text-blue-100\">총 이용 한도</p>\n              <p className=\"mt-1 text-sm font-semibold\">\n                {formatCurrencyKRW(totalLimit)}\n              </p>\n            </div>\n            <div className=\"rounded-xl bg-white/10 px-4 py-3 backdrop-blur\">\n              <p className=\"text-blue-100\">총 결제 예정 금액</p>\n              <p className=\"mt-1 text-sm font-semibold\">\n                {formatCurrencyKRW(totalBilling)}\n              </p>\n            </div>\n          </div>\n        </div>\n      </section>",
                 "description": [
-                  "요약 정보 카드 영역은 대시보드에서 핵심 수치나 상태를 개별 카드 형태로 제공합니다.",
-                  "각 카드는 사각형 박스로 디자인되어 깔끔하게 배열됩니다.",
-                  "사용자는 마우스 오버, 클릭 등으로 카드의 상세 정보 화면으로 이동할 수 있습니다.",
-                  "카드의 내용이나 상태는 데이터 변화에 따라 실시간으로 업데이트됩니다.",
-                  "카드 목록 컴포넌트와 함께 구성되어 있습니다."
+                  "파란 그라디언트(from-shinhancard-blue to-blue-500) 배경의 상단 배너 섹션입니다.",
+                  "'내 카드 관리 대시보드' 제목과 안내 문구 아래, 총 이용 한도(₩9,000,000)와 총 결제 예정 금액(₩4,350,000)을 반투명 카드 두 장으로 나란히 표시합니다.",
+                  "금액은 cards 배열 전체를 reduce 하여 실시간 합산한 값입니다."
                 ]
               }
             ],
@@ -85,11 +77,9 @@
                     "component_name": "CardList",
                     "code": "      <div className=\"flex items-baseline justify-between\">\n        <h2 className=\"text-sm font-semibold text-slate-900\">보유 카드</h2>\n        <p className=\"text-xs text-slate-500\">\n          총 {cards.length}장의 카드가 등록되어 있습니다.\n        </p>\n      </div>\n      <div className=\"grid gap-4 md:grid-cols-3\">\n        {cards.map((card) => (\n          <CardSummaryCard key={card.id} card={card} />\n        ))}\n      </div>",
                     "description": [
-                      "이 영역은 카드의 주요 정보를 리스트 형태로 나열하는 역할을 합니다.",
-                      "여러 개의 미니 카드가 행이나 열로 정돈되어 보여집니다.",
-                      "사용자는 각 카드를 클릭해 자세한 정보를 확인할 수 있습니다.",
-                      "카드 데이터에 따라 리스트의 구성과 상태가 자동으로 갱신됩니다.",
-                      "상위 카드 목록 컴포넌트 내에서 렌더링됩니다."
+                      "섹션 타이틀(보유 카드)과 등록 카드 수 안내문을 포함하는 헤더 행입니다.",
+                      "그 아래 grid 레이아웃(gap-4)으로 CardSummaryCard 컴포넌트 3개를 렌더링합니다.",
+                      "카드 데이터는 src/constants/mockData.ts의 cards 배열에서 가져옵니다."
                     ]
                   }
                 ],
@@ -101,44 +91,60 @@
                     "areas": [
                       {
                         "id": "area-2-1-1-1-1",
-                        "name": "카드 정보 및 상태 표시",
+                        "name": "카드명 및 카드 그래픽",
                         "source_file": "src/components/CardSummaryCard.tsx",
                         "component_name": "CardSummaryCard",
-                        "code": "  return (\n    <article className=\"card-shadow flex flex-col justify-between p-5 transition hover:-translate-y-1 hover:shadow-xl\">\n      <div className=\"flex items-start justify-between gap-3\">\n        <div>\n          <h3 className=\"text-sm font-semibold text-slate-900\">\n            {card.name}\n          </h3>\n          <p className=\"mt-1 text-xs text-slate-500\">\n            {`•••• ${card.last4}`}\n          </p>\n        </div>\n        <div\n          className=\"h-8 w-14 rounded-xl bg-gradient-to-br from-shinhancard-blue to-blue-400 shadow-sm\"\n          aria-hidden=\"true\"\n        />\n      </div>\n\n      <div className=\"mt-4 space-y-2 text-xs\">\n        <div className=\"flex items-center justify-between\">\n          <span className=\"text-slate-500\">이용 한도</span>\n          <span className=\"font-semibold text-slate-900\">\n            {formatCurrencyKRW(card.limit)}\n          </span>\n        </div>\n        <div className=\"flex items-center justify-between\">\n          <span className=\"text-slate-500\">결제 예정 금액</span>\n          <span className=\"font-semibold text-shinhancard-blue\">\n            {formatCurrencyKRW(card.billingAmount)}\n          </span>\n        </div>\n      </div>\n\n      <div className=\"mt-4 flex items-center justify-between text-xs\">\n        <div className=\"inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 text-[11px] text-slate-600\">\n          {isPaused ? (\n            <>\n              <PauseCircle className=\"h-3.5 w-3.5 text-amber-500\" />\n              <span>일시정지</span>\n            </>\n          ) : (\n            <>\n              <PlayCircle className=\"h-3.5 w-3.5 text-emerald-500\" />\n              <span>정상 이용중</span>\n            </>\n          )}\n        </div>\n        <Link\n          href={`/cards/${card.id}`}\n          className=\"inline-flex items-center gap-1 text-[11px] font-semibold text-shinhancard-blue hover:underline\"\n        >\n          상세 보기\n          <ArrowRight className=\"h-3 w-3\" />\n        </Link>\n      </div>\n    </article>\n  );",
+                        "code": "      <div className=\"flex items-start justify-between gap-3\">\n        <div>\n          <h3 className=\"text-sm font-semibold text-slate-900\">\n            {card.name}\n          </h3>\n          <p className=\"mt-1 text-xs text-slate-500\">\n            {`•••• ${card.last4}`}\n          </p>\n        </div>\n        <div\n          className=\"h-8 w-14 rounded-xl bg-gradient-to-br from-shinhancard-blue to-blue-400 shadow-sm\"\n          aria-hidden=\"true\"\n        />\n      </div>",
                         "description": [
-                          "이 영역은 카드의 잔액, 상태 등 주요 속성을 시각적으로 명확하게 표현합니다.",
-                          "텍스트, 아이콘, 색상 등을 조합해 정보를 효과적으로 드러냅니다.",
-                          "사용자는 카드의 정보를 한눈에 확인할 수 있으며, 상태 변화도 즉시 감지할 수 있습니다.",
-                          "카드의 상태에 따라 스타일이 달라질 수 있습니다.",
-                          "카드 요약 카드 내에 일체형으로 포함되어 있습니다."
+                          "좌측에 카드명(h3, font-semibold)과 마스킹 번호(•••• XXXX, text-slate-500)를 세로 배치합니다.",
+                          "우측에 파란 그라디언트(shinhancard-blue → blue-400) 직사각형 카드 그래픽(h-8 w-14)을 배치합니다.",
+                          "예시: '신한 Deep Dream 카드 / •••• 1234'"
+                        ]
+                      },
+                      {
+                        "id": "area-2-1-1-1-2",
+                        "name": "이용 한도 / 결제 예정 금액",
+                        "source_file": "src/components/CardSummaryCard.tsx",
+                        "component_name": "CardSummaryCard",
+                        "code": "      <div className=\"mt-4 space-y-2 text-xs\">\n        <div className=\"flex items-center justify-between\">\n          <span className=\"text-slate-500\">이용 한도</span>\n          <span className=\"font-semibold text-slate-900\">\n            {formatCurrencyKRW(card.limit)}\n          </span>\n        </div>\n        <div className=\"flex items-center justify-between\">\n          <span className=\"text-slate-500\">결제 예정 금액</span>\n          <span className=\"font-semibold text-shinhancard-blue\">\n            {formatCurrencyKRW(card.billingAmount)}\n          </span>\n        </div>\n      </div>",
+                        "description": [
+                          "이용 한도(레이블 slate-500, 금액 slate-900)와 결제 예정 금액(레이블 slate-500, 금액 shinhancard-blue) 두 행을 space-y-2로 배치합니다.",
+                          "예시: 이용 한도 ₩3,000,000 / 결제 예정 금액 ₩1,250,000 (신한 Deep Dream 카드 기준)"
+                        ]
+                      },
+                      {
+                        "id": "area-2-1-1-1-3",
+                        "name": "이용 상태 뱃지 및 상세 보기 링크",
+                        "source_file": "src/components/CardSummaryCard.tsx",
+                        "component_name": "CardSummaryCard",
+                        "code": "      <div className=\"mt-4 flex items-center justify-between text-xs\">\n        <div className=\"inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1 text-[11px] text-slate-600\">\n          {isPaused ? (\n            <><PauseCircle className=\"h-3.5 w-3.5 text-amber-500\" /><span>일시정지</span></>\n          ) : (\n            <><PlayCircle className=\"h-3.5 w-3.5 text-emerald-500\" /><span>정상 이용중</span></>\n          )}\n        </div>\n        <Link\n          href={`/cards/${card.id}`}\n          className=\"inline-flex items-center gap-1 text-[11px] font-semibold text-shinhancard-blue hover:underline\"\n        >\n          상세 보기\n          <ArrowRight className=\"h-3 w-3\" />\n        </Link>\n      </div>",
+                        "description": [
+                          "좌측에 이용 상태 pill 뱃지(PlayCircle emerald=정상, PauseCircle amber=일시정지)를 표시합니다.",
+                          "우측에 '/cards/[id]'로 이동하는 '상세 보기 →' 링크(shinhancard-blue, hover:underline)를 배치합니다.",
+                          "신한 체크카드 S-Line은 paused 상태로 PauseCircle 아이콘이 표시됩니다."
                         ]
                       }
                     ],
                     "children": [],
                     "description": [
-                      "카드 요약 카드는 특정 카드의 핵심 정보를 압축해서 보여주는 역할을 합니다.",
-                      "사각형 혹은 둥근 박스 형태로 디자인되어 있습니다.",
-                      "카드는 클릭 또는 터치 시 상세 페이지로 이동하는 등 상호작용이 가능합니다.",
-                      "카드의 상태가 변화하면 시각적으로 강조되거나 내용이 갱신됩니다.",
-                      "카드 정보 및 상태 표시 영역과 연계되어 있습니다."
+                      "src/components/CardSummaryCard.tsx. 개별 카드 한 장의 요약 정보를 표시하는 카드 컴포넌트입니다.",
+                      "카드명·마스킹 번호(예: •••• 1234), 카드 그래픽, 이용 한도, 결제 예정 금액, 정상/일시정지 상태 뱃지, '상세 보기 →' 링크로 구성됩니다.",
+                      "hover 시 위로 살짝 들리는 애니메이션(-translate-y-1)이 적용됩니다.",
+                      "신한 Deep Dream 카드(active), 신한 The Best-F 카드(active), 신한 체크카드 S-Line(paused) 3종이 렌더링됩니다."
                     ]
                   }
                 ],
                 "description": [
-                  "카드 목록 컴포넌트는 여러 개의 카드 요약 정보를 리스트 형식으로 보여줍니다.",
-                  "시각적으로 동일한 크기의 카드들이 격자 또는 리스트 모양으로 정렬됩니다.",
-                  "각 카드를 클릭하면 해당 카드에 대한 상세 정보로 이동할 수 있습니다.",
-                  "카드의 상태나 내용이 실시간으로 변경될 수 있습니다.",
-                  "대시보드 메인 콘텐츠 및 카드 요약 카드 컴포넌트와 긴밀히 연관되어 있습니다."
+                  "src/components/CardList.tsx. 보유 카드 3장을 세로 리스트로 나열합니다.",
+                  "섹션 상단에 '보유 카드' 헤더와 '총 3장의 카드가 등록되어 있습니다.' 문구를 표시합니다.",
+                  "cards 배열을 순회하며 CardSummaryCard 컴포넌트를 생성합니다."
                 ]
               }
             ],
             "description": [
-              "대시보드 메인 콘텐츠는 사이트 방문 시 핵심 데이터를 요약하여 보여주는 중추적인 역할을 합니다.",
-              "심플하고 직관적인 레이아웃으로 여러 개의 요약 카드가 나열되어 있습니다.",
-              "사용자는 카드나 정보를 클릭하여 보다 상세한 내용을 확인할 수 있습니다.",
-              "이 영역에서 다양한 정보 카드가 실시간으로 갱신될 수 있습니다.",
-              "카드 목록 등 하위 컴포넌트들과 유기적으로 연결됩니다."
+              "대시보드 홈(src/app/page.tsx)으로, 상단 이용 현황 배너와 하단 보유 카드 목록으로 구성됩니다.",
+              "전체 이용 한도(₩9,000,000)와 총 결제 예정 금액(₩4,350,000)을 집계해 배너에 표시합니다.",
+              "카드 목록(CardList) 컴포넌트를 호출해 3장의 보유 카드를 렌더링합니다."
             ]
           },
           {
@@ -153,11 +159,9 @@
                 "component_name": "CardDetailPage",
                 "code": "      <section className=\"card-shadow flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between\">\n        <div className=\"space-y-2\">\n          <Link\n            href=\"/\"\n            className=\"inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-700\"\n          >\n            <ArrowLeft className=\"h-3 w-3\" />\n            대시보드로 돌아가기\n          </Link>\n          <div>\n            <h1 className=\"text-base font-semibold text-slate-900\">\n              {card.name}\n            </h1>\n            <p className=\"mt-1 text-xs text-slate-500\">\n              {`•••• ${card.last4}`} ·{\" \"}\n              {card.status === \"paused\" ? \"일시정지 상태\" : \"정상 이용중\"}\n            </p>\n          </div>\n        </div>\n\n        <div className=\"grid gap-3 text-xs md:grid-cols-2\">\n          <div className=\"rounded-xl bg-slate-50 px-4 py-3\">\n            <p className=\"text-slate-500\">이용 한도</p>\n            <p className=\"mt-1 text-sm font-semibold text-slate-900\">\n              {formatCurrencyKRW(card.limit)}\n            </p>\n          </div>\n          <div className=\"rounded-xl bg-slate-50 px-4 py-3\">\n            <p className=\"text-slate-500\">결제 예정 금액</p>\n            <p className=\"mt-1 text-sm font-semibold text-shinhancard-blue\">\n              {formatCurrencyKRW(card.billingAmount)}\n            </p>\n          </div>\n        </div>\n      </section>",
                 "description": [
-                  "이 영역은 선택한 카드의 상세 정보와 현재 상태를 종합적으로 표시합니다.",
-                  "카드 정보, 잔액, 유효 상태, 최근 활동 등 다양한 데이터가 강조되어 보입니다.",
-                  "사용자는 정보를 빠르게 확인하거나 관리 메뉴로 이동할 수 있습니다.",
-                  "상태에 따라 표시 형식, 색상 등이 변동될 수 있습니다.",
-                  "카드 상세 페이지 내에서 상단 또는 측면에 위치합니다."
+                  "'← 대시보드로 돌아가기' 링크, 카드명(예: 신한 Deep Dream 카드), 마스킹 번호·이용 상태(•••• 1234 · 정상 이용중)로 구성된 상단 정보 헤더입니다.",
+                  "이용 한도(slate 배경 패널)와 결제 예정 금액(shinhancard-blue 텍스트) 두 개의 정보 카드를 나란히 배치합니다.",
+                  "카드 상태가 paused인 경우 '일시정지 상태'로 텍스트가 변경됩니다."
                 ]
               }
             ],
@@ -174,21 +178,17 @@
                     "component_name": "TransactionTable",
                     "code": "      <div className=\"mt-4 overflow-hidden rounded-xl border border-slate-100\">\n        <table className=\"min-w-full divide-y divide-slate-100 text-xs\">\n          <thead className=\"bg-slate-50\">\n            <tr>\n              <th className=\"px-3 py-2 text-left font-medium text-slate-500\">\n                이용일\n              </th>\n              <th className=\"px-3 py-2 text-left font-medium text-slate-500\">\n                가맹점\n              </th>\n              <th className=\"px-3 py-2 text-right font-medium text-slate-500\">\n                금액\n              </th>\n              <th className=\"px-3 py-2 text-center font-medium text-slate-500\">\n                승인 상태\n              </th>\n              <th className=\"px-3 py-2 text-left font-medium text-slate-500\">\n                구분\n              </th>\n            </tr>\n          </thead>\n          <tbody className=\"divide-y divide-slate-100 bg-white\">\n            {transactions.map((tx) => (\n              <tr key={tx.id} className=\"hover:bg-slate-50/60\">\n                <td className=\"whitespace-nowrap px-3 py-2 text-slate-700\">\n                  {tx.date}\n                </td>\n                <td className=\"px-3 py-2 text-slate-800\">{tx.merchant}</td>\n                <td className=\"whitespace-nowrap px-3 py-2 text-right font-semibold text-slate-900\">\n                  {formatCurrencyKRW(tx.amount)}\n                </td>\n                <td className=\"px-3 py-2 text-center\">\n                  <span\n                    className={`inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${\n                      tx.status === \"승인\"\n                        ? \"bg-emerald-50 text-emerald-600\"\n                        : tx.status === \"취소\"\n                        ? \"bg-slate-50 text-slate-500\"\n                        : \"bg-amber-50 text-amber-600\"\n                    }`}\n                  >\n                    {tx.status}\n                  </span>\n                </td>\n                <td className=\"px-3 py-2 text-slate-500\">\n                  {tx.category}\n                </td>\n              </tr>\n            ))}\n            {transactions.length === 0 && (\n              <tr>\n                <td\n                  colSpan={5}\n                  className=\"px-3 py-6 text-center text-slate-400\"\n                >\n                  이용 내역이 없습니다.\n                </td>\n              </tr>\n            )}\n          </tbody>\n        </table>\n      </div>",
                     "description": [
-                      "이 영역은 카드의 모든 거래 내역을 표 형식으로 배치합니다.",
-                      "헤더, 행, 컬럼 등으로 정돈된 표가 나타나며 각 거래의 세부 정보가 포함됩니다.",
-                      "사용자는 행을 클릭하거나 정렬, 필터 등의 조작이 가능합니다.",
-                      "내역 데이터가 변경되면 자동으로 반영됩니다.",
-                      "상위 이용 내역 테이블 컴포넌트 내 핵심 구조로 동작합니다."
+                      "rounded-xl 테두리로 감싼 테이블 본체입니다. 헤더 행(bg-slate-50)과 데이터 행(divide-y)으로 구분됩니다.",
+                      "실제 표시 데이터 예시: 2026-03-08 스타벅스 코리아 ₩5,800 승인, 2026-03-07 쿠팡 ₩89,000 승인, 2026-03-05 GS칼텍스 주유소 ₩65,000 승인.",
+                      "내역이 없을 경우 '이용 내역이 없습니다.' 문구가 전체 열을 span하여 표시됩니다."
                     ]
                   }
                 ],
                 "children": [],
                 "description": [
-                  "이 컴포넌트는 카드 이용 내역을 표 형태로 정리해 보여줍니다.",
-                  "테이블 헤더와 각 행마다 거래 날짜, 금액, 설명 등이 시각적으로 구분됩니다.",
-                  "사용자는 스크롤, 정렬, 상세 보기 등의 상호작용이 가능합니다.",
-                  "거래 내역 데이터가 실시간 또는 검색 조건에 따라 갱신될 수 있습니다.",
-                  "카드 상세 페이지 내 카드 상태 패널과 함께 제공됩니다."
+                  "src/components/TransactionTable.tsx. 선택한 카드의 최근 거래 내역을 테이블로 표시합니다.",
+                  "5개 컬럼(이용일, 가맹점, 금액, 승인 상태, 구분)으로 구성되며, 카드 1번 기준 스타벅스 코리아·쿠팡·GS칼텍스 주유소 3건이 표시됩니다.",
+                  "승인 상태는 emerald(승인)/slate(취소)/amber(대기) 뱃지로 색상 구분됩니다."
                 ]
               },
               {
@@ -198,130 +198,163 @@
                 "areas": [
                   {
                     "id": "area-2-2-2-1",
-                    "name": "카드 관리 버튼 그룹",
+                    "name": "카드 관리 안내 텍스트",
                     "source_file": "src/components/ManagementActions.tsx",
                     "component_name": "ManagementActions",
-                    "code": "      <div className=\"mt-3 grid gap-3 md:grid-cols-1\">\n        <button\n          type=\"button\"\n          className=\"flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-xs font-medium text-slate-800 transition hover:border-shinhancard-blue/40 hover:bg-slate-50\"\n        >\n          <span className=\"inline-flex items-center gap-2\">\n            <PauseCircle className=\"h-4 w-4 text-amber-500\" />\n            {isPaused ? \"카드 이용 재개\" : \"카드 일시정지\"}\n          </span>\n          <span className=\"text-[11px] text-slate-400\">설정 이동</span>\n        </button>\n\n        <button\n          type=\"button\"\n          className=\"flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-xs font-medium text-slate-800 transition hover:border-shinhancard-blue/40 hover:bg-slate-50\"\n        >\n          <span className=\"inline-flex items-center gap-2\">\n            <SlidersHorizontal className=\"h-4 w-4 text-shinhancard-blue\" />\n            한도 변경\n          </span>\n          <span className=\"text-[11px] text-slate-400\">신청 이동</span>\n        </button>\n\n        <button\n          type=\"button\"\n          className=\"flex items-center justify-between rounded-xl border border-red-100 bg-red-50/80 px-4 py-3 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50\"\n        >\n          <span className=\"inline-flex items-center gap-2\">\n            <AlertTriangle className=\"h-4 w-4\" />\n            분실·도난 신고\n          </span>\n          <span className=\"text-[11px] text-red-400\">신고 바로가기</span>\n        </button>\n      </div>",
+                    "code": "      <h2 className=\"text-sm font-semibold text-slate-900\">카드 관리</h2>\n      <p className=\"text-xs text-slate-500\">\n        카드 이용 설정과 분실 신고를 빠르게 처리할 수 있습니다.\n        (데모 화면으로, 실제로 변경되지는 않습니다.)\n      </p>",
                     "description": [
-                      "이 영역은 여러 개의 카드 관리 기능 버튼을 일렬로 나열해 제공합니다.",
-                      "동일한 스타일의 버튼들로 구성되어 있어 명확하게 구분됩니다.",
-                      "사용자는 각 버튼을 클릭하여 필요한 관리 작업을 선택할 수 있습니다.",
-                      "버튼 활성화 여부는 카드의 상태 등 조건에 따라 다르게 표시됩니다.",
-                      "카드 관리 메뉴 내 실질적인 실행 인터페이스 역할을 합니다."
+                      "'카드 관리' 섹션 제목(h2, font-semibold)과 데모 안내 문구(text-slate-500)로 구성된 텍스트 영역입니다.",
+                      "버튼 그룹 위에 위치하며 섹션의 목적을 설명합니다."
+                    ]
+                  },
+                  {
+                    "id": "area-2-2-2-2",
+                    "name": "카드 일시정지 버튼",
+                    "source_file": "src/components/ManagementActions.tsx",
+                    "component_name": "ManagementActions",
+                    "code": "        <button\n          type=\"button\"\n          className=\"flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-xs font-medium text-slate-800 transition hover:border-shinhancard-blue/40 hover:bg-slate-50\"\n        >\n          <span className=\"inline-flex items-center gap-2\">\n            <PauseCircle className=\"h-4 w-4 text-amber-500\" />\n            {isPaused ? \"카드 이용 재개\" : \"카드 일시정지\"}\n          </span>\n          <span className=\"text-[11px] text-slate-400\">설정 이동</span>\n        </button>",
+                    "description": [
+                      "PauseCircle 아이콘(amber-500)과 '카드 일시정지' 레이블, 우측 '설정 이동' 텍스트로 구성된 첫 번째 관리 버튼입니다.",
+                      "카드가 이미 일시정지 상태(paused)면 레이블이 '카드 이용 재개'로 변경됩니다.",
+                      "border-slate-200 테두리, hover 시 shinhancard-blue 테두리 및 배경 변경이 적용됩니다."
+                    ]
+                  },
+                  {
+                    "id": "area-2-2-2-3",
+                    "name": "한도 변경 버튼",
+                    "source_file": "src/components/ManagementActions.tsx",
+                    "component_name": "ManagementActions",
+                    "code": "        <button\n          type=\"button\"\n          className=\"flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-xs font-medium text-slate-800 transition hover:border-shinhancard-blue/40 hover:bg-slate-50\"\n        >\n          <span className=\"inline-flex items-center gap-2\">\n            <SlidersHorizontal className=\"h-4 w-4 text-shinhancard-blue\" />\n            한도 변경\n          </span>\n          <span className=\"text-[11px] text-slate-400\">신청 이동</span>\n        </button>",
+                    "description": [
+                      "SlidersHorizontal 아이콘(shinhancard-blue)과 '한도 변경' 레이블, 우측 '신청 이동' 텍스트로 구성된 두 번째 관리 버튼입니다.",
+                      "이용 한도 변경 신청 페이지로 이동하는 기능을 담당합니다."
+                    ]
+                  },
+                  {
+                    "id": "area-2-2-2-4",
+                    "name": "분실·도난 신고 버튼",
+                    "source_file": "src/components/ManagementActions.tsx",
+                    "component_name": "ManagementActions",
+                    "code": "        <button\n          type=\"button\"\n          className=\"flex items-center justify-between rounded-xl border border-red-100 bg-red-50/80 px-4 py-3 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50\"\n        >\n          <span className=\"inline-flex items-center gap-2\">\n            <AlertTriangle className=\"h-4 w-4\" />\n            분실·도난 신고\n          </span>\n          <span className=\"text-[11px] text-red-400\">신고 바로가기</span>\n        </button>",
+                    "description": [
+                      "AlertTriangle 아이콘과 '분실·도난 신고' 레이블, 우측 '신고 바로가기' 텍스트로 구성된 세 번째 관리 버튼입니다.",
+                      "border-red-100, bg-red-50/80 배경, text-red-600으로 강조 스타일이 적용된 긴급 액션 버튼입니다.",
+                      "카드 분실 또는 도난 시 즉시 신고 처리를 위한 진입점입니다."
                     ]
                   }
                 ],
                 "children": [],
                 "description": [
-                  "카드 관리 메뉴는 카드와 관련된 다양한 관리 기능을 제공합니다.",
-                  "여러 개의 관리 버튼 또는 드롭다운 메뉴로 구성되어 있습니다.",
-                  "사용자는 버튼 클릭으로 카드 해지, 재발급 등 여러 동작을 수행할 수 있습니다.",
-                  "카드의 상태에 따라 활성화/비활성화되는 버튼이 있을 수 있습니다.",
-                  "카드 상세 페이지 내에서 카드 정보와 함께 배치됩니다."
+                  "src/components/ManagementActions.tsx. 카드 이용 관련 관리 기능 3가지를 버튼 형태로 제공합니다.",
+                  "버튼 목록: ① 카드 일시정지(PauseCircle 아이콘, amber / 설정 이동), ② 한도 변경(SlidersHorizontal 아이콘, blue / 신청 이동), ③ 분실·도난 신고(AlertTriangle 아이콘, 빨간 배경 강조 / 신고 바로가기).",
+                  "데모 화면으로 실제 기능 변경은 일어나지 않습니다."
                 ]
               }
             ],
             "description": [
-              "카드 상세 페이지는 선택한 카드의 모든 상세 정보와 이용 현황을 보여줍니다.",
-              "페이지는 정보 패널과 이용 내역 테이블, 관리 메뉴 등으로 구성됩니다.",
-              "사용자는 이 페이지에서 카드 내역 확인 및 다양한 관리 기능을 사용할 수 있습니다.",
-              "카드 관리, 거래 내역 등 상태 변화가 직접적으로 반영됩니다.",
-              "여러 하위 컴포넌트 및 영역과 조합되어 상세 정보를 제공합니다."
+              "src/app/cards/[cardId]/page.tsx. 선택한 카드의 상세 정보를 보여주는 페이지입니다.",
+              "상단 카드 정보 패널, 이용 내역 테이블(TransactionTable), 카드 관리 메뉴(ManagementActions) 세 영역으로 구성됩니다.",
+              "cardId 파라미터로 mockData에서 특정 카드를 조회하며, 없으면 에러 화면을 표시합니다."
             ]
           }
         ],
         "description": [
-          "바디 컴포넌트는 페이지의 주요 콘텐츠를 담는 최상위 영역입니다.",
-          "시각적으로 헤더 하단 전체 영역을 차지하며 다양한 섹션으로 구분되어 있습니다.",
-          "사용자는 이 영역에서 핵심 정보 확인, 카드 관리, 상세 내역 조회 등 다양한 인터랙션을 할 수 있습니다.",
-          "하위에 대시보드, 카드 상세 페이지 등 여러 컴포넌트와 영역을 포함하고 있습니다.",
-          "상황 및 페이지에 따라 하위 내용이 동적으로 달라질 수 있습니다."
+          "헤더 하단의 전체 콘텐츠 영역으로, 대시보드 페이지와 카드 상세 페이지 두 개의 하위 페이지를 포함합니다.",
+          "라우팅에 따라 대시보드(/) 또는 카드 상세(/cards/[cardId])가 렌더링됩니다.",
+          "공통 레이아웃(layout.tsx)에 의해 헤더 아래 max-w-6xl 폭으로 중앙 정렬됩니다."
         ]
       }
     ],
     "flow": {
-      "title": "카드 관리 대시보드 사용자 플로우",
+      "title": "신한카드 내 카드 관리 사용자 플로우",
       "steps": [
         {
           "step": 1,
-          "component": "헤더",
-          "area": "로고 및 브랜드",
-          "action": "사용자가 페이지 상단에 보이는 로고 또는 브랜드명을 클릭합니다.",
-          "result": "메인 대시보드 페이지로 이동합니다."
+          "component": "바디",
+          "area": "이용 현황 배너",
+          "action": "사용자가 브라우저에서 서비스에 접속하면 대시보드 홈 화면이 로드됩니다.",
+          "result": "파란 그라디언트 배너에 총 이용 한도(₩9,000,000)와 총 결제 예정 금액(₩4,350,000)이 즉시 표시됩니다."
         },
         {
           "step": 2,
           "component": "헤더",
-          "area": "내비게이션 메뉴",
-          "action": "사용자가 헤더의 내비게이션 메뉴에서 원하는 주요 메뉴(예: 대시보드, 카드 목록 등)를 클릭합니다.",
-          "result": "선택한 페이지로 이동되며 해당 메뉴가 시각적으로 강조됩니다."
+          "area": "로고 및 브랜드",
+          "action": "사용자가 좌측 신한카드 로고를 클릭합니다.",
+          "result": "메인 대시보드(/) 로 이동합니다. 이미 홈이면 페이지가 새로고침됩니다."
         },
         {
           "step": 3,
-          "component": "바디",
-          "area": "",
-          "action": "사용자가 메인 대시보드에 진입하여 주요 콘텐츠를 확인합니다.",
-          "result": "대시보드의 요약 정보 카드와 카드 목록이 화면에 표시됩니다."
+          "component": "헤더",
+          "area": "내비게이션 메뉴",
+          "action": "사용자가 헤더 우측의 '대시보드' 링크를 클릭합니다.",
+          "result": "대시보드 홈으로 이동하며 해당 메뉴가 시각적으로 활성화됩니다."
         },
         {
           "step": 4,
           "component": "대시보드 메인 콘텐츠",
-          "area": "요약 정보 카드",
-          "action": "사용자가 요약 정보 카드에 마우스를 올리거나 카드를 클릭합니다.",
-          "result": "해당 카드와 관련된 상세 데이터가 강조되어 나타나거나 상세 페이지로 이동할 수 있는 안내가 표시됩니다."
+          "area": "이용 현황 배너",
+          "action": "사용자가 배너에서 총 이용 한도와 총 결제 예정 금액을 확인합니다.",
+          "result": "보유 카드 3장의 합산 데이터가 반투명 카드 형태로 명확히 표시됩니다."
         },
         {
           "step": 5,
           "component": "카드 목록",
           "area": "카드 요약 카드 리스트",
-          "action": "사용자가 카드 요약 카드 리스트에서 관심 있는 카드를 클릭합니다.",
-          "result": "선택한 카드의 상세 정보 페이지로 이동합니다."
+          "action": "사용자가 보유 카드 섹션을 스크롤하며 3장의 카드를 확인합니다.",
+          "result": "신한 Deep Dream, The Best-F, 체크카드 S-Line 각각의 이용 한도·결제 예정 금액·이용 상태가 카드 형태로 표시됩니다."
         },
         {
           "step": 6,
           "component": "카드 요약 카드",
           "area": "카드 정보 및 상태 표시",
-          "action": "사용자가 카드 요약 카드 내에서 카드의 잔액 등 주요 정보를 눈으로 확인합니다.",
-          "result": "선택한 카드의 현재 상태, 잔액 등 상세 데이터가 즉시 표시됩니다."
+          "action": "사용자가 특정 카드(예: 신한 Deep Dream 카드)의 '상세 보기 →' 링크를 클릭합니다.",
+          "result": "/cards/1 로 이동하며 해당 카드의 상세 페이지가 로드됩니다."
         },
         {
           "step": 7,
           "component": "카드 상세 페이지",
           "area": "카드 상세 정보 및 상태 패널",
-          "action": "사용자가 카드 상세 페이지로 이동하여 상단의 카드 상태 패널을 확인합니다.",
-          "result": "선택된 카드의 상세 정보, 잔액, 유효 상태 및 최근 활동이 패널에 종합적으로 표시됩니다."
+          "action": "사용자가 상단 카드 정보 패널에서 카드명, 마스킹 번호, 이용 한도, 결제 예정 금액을 확인합니다.",
+          "result": "'신한 Deep Dream 카드 •••• 1234 · 정상 이용중', 이용 한도 ₩3,000,000, 결제 예정 금액 ₩1,250,000이 표시됩니다."
         },
         {
           "step": 8,
           "component": "이용 내역 테이블",
           "area": "거래 내역 테이블",
-          "action": "사용자가 거래 내역 테이블에서 스크롤하거나 특정 열 제목을 클릭해 정렬을 시도합니다.",
-          "result": "테이블이 해당 조건에 맞게 자동으로 정렬 혹은 스크롤되고 실시간 내역이 갱신됩니다."
+          "action": "사용자가 이용 내역 테이블에서 최근 거래 3건을 확인합니다.",
+          "result": "2026-03-08 스타벅스 코리아 ₩5,800 승인, 2026-03-07 쿠팡 ₩89,000 승인, 2026-03-05 GS칼텍스 주유소 ₩65,000 승인이 표시됩니다."
         },
         {
           "step": 9,
-          "component": "이용 내역 테이블",
-          "area": "거래 내역 테이블",
-          "action": "사용자가 거래 내역의 특정 행을 클릭합니다.",
-          "result": "선택한 거래의 상세 정보 팝업 또는 세부 내역이 표시됩니다."
+          "component": "카드 관리 메뉴",
+          "area": "카드 관리 버튼 그룹",
+          "action": "사용자가 '카드 일시정지' 버튼을 클릭합니다.",
+          "result": "데모 화면으로 실제 변경은 일어나지 않지만, 버튼 hover 스타일이 반응하며 설정 이동 안내가 표시됩니다."
         },
         {
           "step": 10,
           "component": "카드 관리 메뉴",
           "area": "카드 관리 버튼 그룹",
-          "action": "사용자가 카드 관리 메뉴 내의 버튼 그룹에서 '카드 해지', '재발급' 등 관리 버튼을 클릭합니다.",
-          "result": "카드 해지, 재발급 등 해당 관리 동작이 실행되고 완료 메시지나 상태 변화가 반영됩니다."
+          "action": "사용자가 '한도 변경' 버튼을 클릭합니다.",
+          "result": "신청 이동 안내가 표시됩니다. (데모 화면으로 실제 변경 없음)"
         },
         {
           "step": 11,
           "component": "카드 관리 메뉴",
           "area": "카드 관리 버튼 그룹",
-          "action": "카드의 상태에 따라 비활성화된 버튼을 사용자가 클릭하려 합니다.",
-          "result": "버튼이 비활성화되어 있어 동작하지 않으며, 필요시 안내 메시지가 나타납니다."
+          "action": "사용자가 빨간색으로 강조된 '분실·도난 신고' 버튼을 클릭합니다.",
+          "result": "'신고 바로가기' 안내가 표시됩니다. (데모 화면으로 실제 신고 처리 없음)"
+        },
+        {
+          "step": 12,
+          "component": "카드 상세 페이지",
+          "area": "카드 상세 정보 및 상태 패널",
+          "action": "사용자가 '← 대시보드로 돌아가기' 링크를 클릭합니다.",
+          "result": "대시보드 홈(/)으로 이동하며 보유 카드 목록이 다시 표시됩니다."
         }
       ]
     },
-    "diagram": "flowchart LR\n  comp1[\"헤더\"]\n  area1_1(\"로고 및 브랜드\")\n  area1_2(\"내비게이션 메뉴\")\n  comp1 --> area1_1\n  comp1 --> area1_2\n\n  comp2[\"바디\"]\n\n  comp2_1[\"대시보드 메인 콘텐츠\"]\n  comp2 --> comp2_1\n\n  area2_1_1(\"요약 정보 카드\")\n  comp2_1 --> area2_1_1\n\n  comp2_1_1[\"카드 목록\"]\n  comp2_1 --> comp2_1_1\n\n  area2_1_1_1(\"카드 요약 카드 리스트\")\n  comp2_1_1 --> area2_1_1_1\n\n  comp2_1_1_1[\"카드 요약 카드\"]\n  comp2_1_1 --> comp2_1_1_1\n\n  area2_1_1_1_1(\"카드 정보 및 상태 표시\")\n  comp2_1_1_1 --> area2_1_1_1_1\n\n  comp2_2[\"카드 상세 페이지\"]\n  comp2 --> comp2_2\n\n  area2_2_1(\"카드 상세 정보 및 상태 패널\")\n  comp2_2 --> area2_2_1\n\n  comp2_2_1[\"이용 내역 테이블\"]\n  comp2_2 --> comp2_2_1\n\n  area2_2_1_1(\"거래 내역 테이블\")\n  comp2_2_1 --> area2_2_1_1\n\n  comp2_2_2[\"카드 관리 메뉴\"]\n  comp2_2 --> comp2_2_2\n\n  area2_2_2_1(\"카드 관리 버튼 그룹\")\n  comp2_2_2 --> area2_2_2_1",
-    "preview_html": "<!DOCTYPE html>\n<html lang=\"ko\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>내 카드 관리 대시보드 - 모바일 와이어프레임</title>\n  <meta name=\"viewport\" content=\"width=390, initial-scale=1.0, user-scalable=no\">\n  <script>\n(function(){\n  function applyHighlight(id){\n    document.querySelectorAll('[data-id]').forEach(function(el){\n      el.style.outline='';\n      el.style.boxShadow='';\n      el.style.transition='';\n    });\n    if(!id)return;\n    var el=document.querySelector('[data-id=\"'+id+'\"]');\n    if(el){\n      el.style.transition='box-shadow 0.15s, outline 0.15s';\n      el.style.outline='2px solid #eab308';\n      el.style.boxShadow='inset 0 0 0 9999px rgba(253,224,71,0.22)';\n      el.scrollIntoView({behavior:'smooth',block:'nearest'});\n    }\n  }\n  window.addEventListener('message',function(e){\n    var d=e.data;\n    if(d&&d.type==='highlight')applyHighlight(d.id||null);\n  });\n})();\n  </script>\n</head>\n<body style=\"margin:0;padding:0;background:#f0f2f5;overflow-x:hidden;\">\n  <div style=\"width:100%;max-width:390px;margin:0 auto;background:white;min-height:100vh;overflow-x:hidden;box-sizing:border-box\">\n    \n    <!-- 헤더 -->\n    <div data-id=\"comp-1\" style=\"height:52px;background:#1e293b;display:flex;align-items:center;justify-content:space-between;padding:0 16px;\">\n      <!-- 로고 및 브랜드 -->\n      <div data-id=\"area-1-1\" style=\"background:rgba(255,255,255,0.15);width:80px;height:24px;border-radius:6px;display:inline-block;display:flex;align-items:center;justify-content:center;\">\n        <span style=\"font-size:13px;color:white;font-weight:600;letter-spacing:-1px;\">로고</span>\n      </div>\n      <!-- 내비게이션 메뉴 -->\n      <div data-id=\"area-1-2\" style=\"display:flex;gap:8px;\">\n        <div style=\"background:rgba(255,255,255,0.2);width:28px;height:28px;border-radius:50%;display:inline-block\"></div>\n        <div style=\"background:rgba(255,255,255,0.2);width:28px;height:28px;border-radius:50%;display:inline-block\"></div>\n      </div>\n    </div>\n    <!-- Section divider -->\n    <div style=\"height:8px;background:#f0f2f5;\"></div>\n    \n    <!-- 바디 -->\n    <div data-id=\"comp-2\" style=\"width:100%;\">\n    \n      <!-- 대시보드 메인 콘텐츠 -->\n      <div data-id=\"comp-2-1\" style=\"width:100%;\">\n        \n        <!-- 요약 정보 카드 -->\n        <section data-id=\"area-2-1-1\" style=\"background:linear-gradient(135deg,#1e293b,#334155);padding:20px 16px;\">\n          <div style=\"display:flex;flex-direction:column;gap:16px;\">\n            <div>\n              <h1 style=\"font-size:16px;font-weight:700;color:white;margin:0 0 4px;-webkit-font-smoothing:antialiased;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\">\n                내 카드 관리 대시보드\n              </h1>\n              <p style=\"font-size:12px;color:rgba(255,255,255,0.55);margin:0 0 16px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\">\n                보유 카드 현황과 결제 예정 금액을 한눈에 확인하세요.\n              </p>\n            </div>\n            <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:10px;\">\n              <div style=\"background:rgba(255,255,255,0.10);border-radius:10px;padding:12px;\">\n                <div style=\"font-size:12px;color:rgba(59,130,246,0.8);margin-bottom:8px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\">총 이용 한도</div>\n                <div style=\"background:#cbd5e1;height:18px;width:70%;border-radius:4px\"></div>\n              </div>\n              <div style=\"background:rgba(255,255,255,0.10);border-radius:10px;padding:12px;\">\n                <div style=\"font-size:12px;color:rgba(59,130,246,0.8);margin-bottom:8px;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\">총 결제 예정 금액</div>\n                <div style=\"background:#cbd5e1;height:18px;width:70%;border-radius:4px\"></div>\n              </div>\n            </div>\n          </div>\n        </section>\n        <!-- Section divider -->\n        <div style=\"height:8px;background:#f0f2f5;\"></div>\n        \n        <!-- 카드 목록 -->\n        <div data-id=\"comp-2-1-1\" style=\"width:100%;\">\n          <!-- 카드 요약 카드 리스트 -->\n          <div data-id=\"area-2-1-1-1\" style=\"width:100%;\">\n            <!-- 카드 요약 카드 x3 예시 -->\n            <div data-id=\"comp-2-1-1-1\" style=\"background:white;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin:8px 16px;padding:16px;\">\n              <!-- 카드 정보 및 상태 표시 -->\n              <div data-id=\"area-2-1-1-1-1\">\n                <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">\n                  <div style=\"background:#e2e8f0;height:16px;width:140px;border-radius:6px\"></div>\n                  <div style=\"background:#dcfce7;color:#16a34a;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;display:inline-block\">정상</div>\n                </div>\n                <div style=\"display:flex;gap:8px;margin-bottom:12px;\">\n                  <div style=\"flex:1;background:#f8fafc;border-radius:8px;padding:10px;\">\n                    <div style=\"background:#e2e8f0;height:10px;width:60%;border-radius:4px;margin-bottom:6px;\"></div>\n                    <div style=\"background:#cbd5e1;height:14px;width:80%;border-radius:4px\"></div>\n                  </div>\n                  <div style=\"flex:1;background:#f8fafc;border-radius:8px;padding:10px;\">\n                    <div style=\"background:#e2e8f0;height:10px;width:60%;border-radius:4px;margin-bottom:6px;\"></div>\n                    <div style=\"background:#cbd5e1;height:14px;width:80%;border-radius:4px\"></div>\n                  </div>\n                </div>\n                <div style=\"border-top:1px solid #f1f5f9;padding-top:10px\">\n                  <div style=\"display:flex;gap:8px;\">\n                    <div style=\"flex:1;background:#f1f5f9;border-radius:8px;padding:8px;text-align:center;font-size:12px;color:#64748b\">상세보기</div>\n                    <div style=\"flex:1;background:#f1f5f9;border-radius:8px;padding:8px;text-align:center;font-size:12px;color:#64748b\">카드 관리</div>\n                  </div>\n                </div>\n              </div>\n            </div>\n            <div data-id=\"comp-2-1-1-1\" style=\"background:white;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin:8px 16px;padding:16px;\">\n              <!-- 카드 정보 및 상태 표시 -->\n              <div data-id=\"area-2-1-1-1-1\">\n                <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">\n                  <div style=\"background:#e2e8f0;height:16px;width:140px;border-radius:6px\"></div>\n                  <div style=\"background:#dcfce7;color:#16a34a;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;display:inline-block\">정상</div>\n                </div>\n                <div style=\"display:flex;gap:8px;margin-bottom:12px;\">\n                  <div style=\"flex:1;background:#f8fafc;border-radius:8px;padding:10px;\">\n                    <div style=\"background:#e2e8f0;height:10px;width:60%;border-radius:4px;margin-bottom:6px;\"></div>\n                    <div style=\"background:#cbd5e1;height:14px;width:80%;border-radius:4px\"></div>\n                  </div>\n                  <div style=\"flex:1;background:#f8fafc;border-radius:8px;padding:10px;\">\n                    <div style=\"background:#e2e8f0;height:10px;width:60%;border-radius:4px;margin-bottom:6px;\"></div>\n                    <div style=\"background:#cbd5e1;height:14px;width:80%;border-radius:4px\"></div>\n                  </div>\n                </div>\n                <div style=\"border-top:1px solid #f1f5f9;padding-top:10px\">\n                  <div style=\"display:flex;gap:8px;\">\n                    <div style=\"flex:1;background:#f1f5f9;border-radius:8px;padding:8px;text-align:center;font-size:12px;color:#64748b\">상세보기</div>\n                    <div style=\"flex:1;background:#f1f5f9;border-radius:8px;padding:8px;text-align:center;font-size:12px;color:#64748b\">카드 관리</div>\n                  </div>\n                </div>\n              </div>\n            </div>\n            <div data-id=\"comp-2-1-1-1\" style=\"background:white;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.08);margin:8px 16px;padding:16px;\">\n              <!-- 카드 정보 및 상태 표시 -->\n              <div data-id=\"area-2-1-1-1-1\">\n                <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;\">\n                  <div style=\"background:#e2e8f0;height:16px;width:140px;border-radius:6px\"></div>\n                  <div style=\"background:#dcfce7;color:#16a34a;font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;display:inline-block\">정상</div>\n                </div>\n                <div style=\"display:flex;gap:8px;margin-bottom:12px;\">\n                  <div style=\"flex:1;background:#f8fafc;border-radius:8px;padding:10px;\">\n                    <div style=\"background:#e2e8f0;height:10px;width:60%;border-radius:4px;margin-bottom:6px;\"></div>\n                    <div style=\"background:#cbd5e1;height:14px;width:80%;border-radius:4px\"></div>\n                  </div>\n                  <div style=\"flex:1;background:#f8fafc;border-radius:8px;padding:10px;\">\n                    <div style=\"background:#e2e8f0;height:10px;width:60%;border-radius:4px;margin-bottom:6px;\"></div>\n                    <div style=\"background:#cbd5e1;height:14px;width:80%;border-radius:4px\"></div>\n                  </div>\n                </div>\n                <div style=\"border-top:1px solid #f1f5f9;padding-top:10px\">\n                  <div style=\"display:flex;gap:8px;\">\n                    <div style=\"flex:1;background:#f1f5f9;border-radius:8px;padding:8px;text-align:center;font-size:12px;color:#64748b\">상세보기</div>\n                    <div style=\"flex:1;background:#f1f5f9;border-radius:8px;padding:8px;text-align:center;font-size:12px;color:#64748b\">카드 관리</div>\n                  </div>\n                </div>\n              </div>\n            </div>\n          </div>\n        </div>\n        \n      </div>\n      \n      <!-- Section divider -->\n      <div style=\"height:8px;background:#f0f2f5;\"></div>\n      \n      <!-- 카드 상세 페이지 -->\n      <div data-id=\"comp-2-2\" style=\"width:100%;\">\n        <!-- 카드 상세 정보 및 상태 패널 -->\n        <div data-id=\"area-2-2-1\" style=\"background:linear-gradient(135deg,#64748b,#94a3b8);padding:20px 16px;border-radius:0 0 16px 16px;\">\n          <div style=\"display:flex;flex-direction:column;gap:10px;\">\n            <div style=\"background:#cbd5e1;height:18px;width:60%;border-radius:4px;margin-bottom:8px\"></div>\n            <div style=\"background:#cbd5e1;height:11px;width:40%;border-radius:4px\"></div>\n            <div style=\"background:#e2e8f0;height:13px;width:80%;border-radius:4px;margin-bottom:4px\"></div>\n            <div style=\"background:#e2e8f0;height:11px;width:50%;border-radius:4px\"></div>\n          </div>\n        </div>\n        <!-- Section divider -->\n        <div style=\"height:8px;background:#f0f2f5;\"></div>\n        <!-- 이용 내역 테이블 -->\n        <div data-id=\"comp-2-2-1\" style=\"width:100%;padding:0 0 16px 0;\">\n          <!-- 거래 내역 테이블 -->\n          <div data-id=\"area-2-2-1-1\" style=\"width:100%;overflow-x:auto;\">\n            <div style=\"padding:0 16px;\">\n              <div style=\"background:white;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,0.03);overflow:hidden;\">\n                <div style=\"display:flex;background:#f8fafc;padding:12px 0;border-bottom:1px solid #e2e8f0\">\n                  <div style=\"flex:1;font-size:13px;font-weight:bold;color:#64748b;text-align:left;padding:0 6px;\">날짜</div>\n                  <div style=\"flex:1;font-size:13px;font-weight:bold;color:#64748b;text-align:left;padding:0 6px;\">내용</div>\n                  <div style=\"flex:1;font-size:13px;font-weight:bold;color:#64748b;text-align:left;padding:0 6px;\">금액</div>\n                </div>\n                <!-- 테이블 표 데이터 샘플 3행 -->\n                <div style=\"display:flex;align-items:center;border-bottom:1px solid #f8fafc;padding:14px 0;\">\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:70%;border-radius:4px\"></div></div>\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:60%;border-radius:4px\"></div></div>\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:50%;border-radius:4px\"></div></div>\n                </div>\n                <div style=\"display:flex;align-items:center;border-bottom:1px solid #f8fafc;padding:14px 0;\">\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:70%;border-radius:4px\"></div></div>\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:60%;border-radius:4px\"></div></div>\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:50%;border-radius:4px\"></div></div>\n                </div>\n                <div style=\"display:flex;align-items:center;padding:14px 0;\">\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:70%;border-radius:4px\"></div></div>\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:60%;border-radius:4px\"></div></div>\n                  <div style=\"flex:1;padding:0 6px;\"><div style=\"background:#cbd5e1;height:13px;width:50%;border-radius:4px\"></div></div>\n                </div>\n              </div>\n            </div>\n          </div>\n        </div>\n        <!-- 카드 관리 메뉴 -->\n        <div data-id=\"comp-2-2-2\" style=\"width:100%;padding:0 16px 24px 16px;\">\n          <!-- 카드 관리 버튼 그룹 -->\n          <div data-id=\"area-2-2-2-1\" style=\"display:flex;gap:8px;\">\n            <div style=\"flex:1;background:#1e293b;border-radius:12px;padding:14px 0;text-align:center;font-size:14px;font-weight:600;color:white;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\">카드 해지</div>\n            <div style=\"flex:1;background:#1e293b;border-radius:12px;padding:14px 0;text-align:center;font-size:14px;font-weight:600;color:white;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\">재발급</div>\n            <div style=\"flex:1;background:#1e293b;border-radius:12px;padding:14px 0;text-align:center;font-size:14px;font-weight:600;color:white;font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\">이용 정지</div>\n          </div>\n        </div>\n      </div>\n    </div>\n    \n  </div>\n</body>\n</html>"
+    "diagram": "flowchart LR\n  comp1[\"헤더\"]\n  area1_1(\"로고 및 브랜드\")\n  area1_2(\"내비게이션 메뉴\")\n  comp1 --> area1_1\n  comp1 --> area1_2\n\n  comp2[\"바디\"]\n\n  comp2_1[\"대시보드 메인 콘텐츠\"]\n  comp2 --> comp2_1\n  area2_1_1(\"이용 현황 배너\")\n  comp2_1 --> area2_1_1\n\n  comp2_1_1[\"카드 목록\"]\n  comp2_1 --> comp2_1_1\n  area2_1_1_1(\"카드 요약 카드 리스트\")\n  comp2_1_1 --> area2_1_1_1\n\n  comp2_1_1_1[\"카드 요약 카드\"]\n  comp2_1_1 --> comp2_1_1_1\n  area2_1_1_1_1(\"카드 정보 및 상태 표시\")\n  comp2_1_1_1 --> area2_1_1_1_1\n\n  comp2_2[\"카드 상세 페이지\"]\n  comp2 --> comp2_2\n  area2_2_1(\"카드 상세 정보 및 상태 패널\")\n  comp2_2 --> area2_2_1\n\n  comp2_2_1[\"이용 내역 테이블\"]\n  comp2_2 --> comp2_2_1\n  area2_2_1_1(\"거래 내역 테이블\")\n  comp2_2_1 --> area2_2_1_1\n\n  comp2_2_2[\"카드 관리 메뉴\"]\n  comp2_2 --> comp2_2_2\n  area2_2_2_1(\"카드 관리 버튼 그룹\")\n  comp2_2_2 --> area2_2_2_1",
+    "preview_html": "<!DOCTYPE html>\n<html lang=\"ko\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=390, initial-scale=1.0, user-scalable=no\">\n  <title>신한카드 내 카드 관리</title>\n  <style>\n    *{box-sizing:border-box;margin:0;padding:0;}\n    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f1f5f9;font-size:12px;color:#0f172a;}\n    table{border-collapse:collapse;width:100%;}\n    th,td{padding:0;}\n    button{cursor:pointer;font-family:inherit;}\n    [data-id]{position:relative;}\n  </style>\n  <script>\n(function(){\n  var currentOverlay = null;\n  var currentEl = null;\n\n  function clearHighlight(){\n    if(currentOverlay && currentOverlay.parentNode){\n      currentOverlay.parentNode.removeChild(currentOverlay);\n    }\n    if(currentEl){\n      currentEl.style.outline = '';\n    }\n    currentOverlay = null;\n    currentEl = null;\n  }\n\n  function highlight(id){\n    clearHighlight();\n    if(!id) return;\n    var el = document.querySelector('[data-id=\"'+id+'\"]');\n    if(!el) return;\n\n    /* 외곽선 */\n    el.style.outline = '2.5px solid #eab308';\n\n    /* 반투명 노란 오버레이 */\n    var ov = document.createElement('div');\n    ov.style.cssText = [\n      'position:absolute',\n      'inset:0',\n      'background:rgba(253,224,71,0.32)',\n      'pointer-events:none',\n      'z-index:9999',\n      'border-radius:inherit'\n    ].join(';');\n    el.appendChild(ov);\n\n    currentOverlay = ov;\n    currentEl = el;\n    el.scrollIntoView({behavior:'smooth', block:'nearest'});\n  }\n\n  window.addEventListener('message', function(e){\n    var d = e.data;\n    if(d && d.type === 'highlight') highlight(d.id || null);\n  });\n})();\n  </script>\n</head>\n<body>\n<div style=\"width:100%;max-width:390px;margin:0 auto;background:white;min-height:100vh;\">\n\n  <!-- PAGE 1 label -->\n  <div style=\"font-size:9px;font-weight:700;letter-spacing:1.2px;color:#94a3b8;padding:5px 14px;background:#f8fafc;border-bottom:1px dashed #e2e8f0;text-transform:uppercase;\">대시보드 페이지</div>\n\n  <!-- 헤더 -->\n  <header data-id=\"comp-1\" style=\"background:white;border-bottom:1px solid #f1f5f9;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;\">\n    <a data-id=\"area-1-1\" href=\"#\" style=\"display:flex;align-items:center;gap:8px;text-decoration:none;\">\n      <div style=\"width:36px;height:36px;background:#003DA5;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,61,165,0.35);\">\n        <svg width=\"18\" height=\"18\" fill=\"none\" stroke=\"white\" stroke-width=\"2\" viewBox=\"0 0 24 24\">\n          <rect x=\"2\" y=\"5\" width=\"20\" height=\"14\" rx=\"2\"/><line x1=\"2\" y1=\"10\" x2=\"22\" y2=\"10\"/>\n        </svg>\n      </div>\n      <div>\n        <div style=\"font-size:13px;font-weight:700;color:#003DA5;line-height:1.2;\">신한카드</div>\n        <div style=\"font-size:10px;color:#94a3b8;line-height:1.2;\">내 카드 관리</div>\n      </div>\n    </a>\n    <nav data-id=\"area-1-2\">\n      <a href=\"#\" style=\"font-size:12px;color:#64748b;padding:5px 12px;border-radius:99px;background:#f1f5f9;text-decoration:none;\">대시보드</a>\n    </nav>\n  </header>\n\n  <!-- 바디 -->\n  <div data-id=\"comp-2\">\n    <!-- 대시보드 메인 콘텐츠 -->\n    <div data-id=\"comp-2-1\">\n\n      <!-- 이용 현황 배너 -->\n      <section data-id=\"area-2-1-1\" style=\"background:linear-gradient(135deg,#003DA5 0%,#3b82f6 100%);padding:20px 16px;\">\n        <div style=\"display:flex;flex-direction:column;gap:16px;\">\n          <div>\n            <h1 style=\"font-size:15px;font-weight:700;color:white;margin-bottom:4px;\">내 카드 관리 대시보드</h1>\n            <p style=\"font-size:11px;color:rgba(219,234,254,0.85);\">보유 카드 현황과 결제 예정 금액을 한눈에 확인하세요.</p>\n          </div>\n          <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:10px;\">\n            <div style=\"background:rgba(255,255,255,0.13);border-radius:12px;padding:12px 14px;backdrop-filter:blur(4px);\">\n              <div style=\"font-size:10px;color:rgba(219,234,254,0.8);margin-bottom:6px;\">총 이용 한도</div>\n              <div style=\"font-size:14px;font-weight:700;color:white;\">₩9,000,000</div>\n            </div>\n            <div style=\"background:rgba(255,255,255,0.13);border-radius:12px;padding:12px 14px;backdrop-filter:blur(4px);\">\n              <div style=\"font-size:10px;color:rgba(219,234,254,0.8);margin-bottom:6px;\">총 결제 예정 금액</div>\n              <div style=\"font-size:14px;font-weight:700;color:white;\">₩4,350,000</div>\n            </div>\n          </div>\n        </div>\n      </section>\n\n      <!-- 카드 목록 -->\n      <div data-id=\"comp-2-1-1\" style=\"padding:16px;\">\n        <div data-id=\"area-2-1-1-1\" style=\"margin-bottom:12px;\">\n          <div style=\"display:flex;align-items:baseline;justify-content:space-between;\">\n            <h2 style=\"font-size:13px;font-weight:700;color:#0f172a;\">보유 카드</h2>\n            <span style=\"font-size:11px;color:#94a3b8;\">총 3장의 카드가 등록되어 있습니다.</span>\n          </div>\n        </div>\n\n        <!-- 카드 1: 신한 Deep Dream -->\n        <article data-id=\"comp-2-1-1-1\" style=\"background:white;border-radius:16px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:16px;border:1px solid #f1f5f9;margin-bottom:12px;\">\n          <div data-id=\"area-2-1-1-1-1\" style=\"display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;\">\n            <div>\n              <div style=\"font-size:13px;font-weight:700;color:#0f172a;margin-bottom:3px;\">신한 Deep Dream 카드</div>\n              <div style=\"font-size:11px;color:#94a3b8;\">•••• 1234</div>\n            </div>\n            <div style=\"width:56px;height:32px;background:linear-gradient(135deg,#003DA5,#60a5fa);border-radius:10px;box-shadow:0 3px 8px rgba(0,61,165,0.3);\"></div>\n          </div>\n          <div data-id=\"area-2-1-1-1-2\" style=\"display:flex;flex-direction:column;gap:7px;margin-bottom:14px;\">\n            <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n              <span style=\"font-size:11px;color:#94a3b8;\">이용 한도</span>\n              <span style=\"font-size:12px;font-weight:600;color:#0f172a;\">₩3,000,000</span>\n            </div>\n            <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n              <span style=\"font-size:11px;color:#94a3b8;\">결제 예정 금액</span>\n              <span style=\"font-size:12px;font-weight:600;color:#003DA5;\">₩1,250,000</span>\n            </div>\n          </div>\n          <div data-id=\"area-2-1-1-1-3\" style=\"display:flex;align-items:center;justify-content:space-between;\">\n            <span style=\"display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#64748b;background:#f8fafc;padding:4px 9px;border-radius:99px;\">\n              <svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#10b981\" stroke-width=\"2.5\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><polygon points=\"10 8 16 12 10 16 10 8\" fill=\"#10b981\" stroke=\"none\"/></svg>\n              정상 이용중\n            </span>\n            <span style=\"font-size:10px;font-weight:600;color:#003DA5;\">상세 보기 →</span>\n          </div>\n        </article>\n\n        <!-- 카드 2: The Best-F -->\n        <article data-id=\"comp-2-1-1-1\" style=\"background:white;border-radius:16px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:16px;border:1px solid #f1f5f9;margin-bottom:12px;\">\n          <div data-id=\"area-2-1-1-1-1\" style=\"display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;\">\n            <div>\n              <div style=\"font-size:13px;font-weight:700;color:#0f172a;margin-bottom:3px;\">신한 The Best-F 카드</div>\n              <div style=\"font-size:11px;color:#94a3b8;\">•••• 5678</div>\n            </div>\n            <div style=\"width:56px;height:32px;background:linear-gradient(135deg,#003DA5,#60a5fa);border-radius:10px;box-shadow:0 3px 8px rgba(0,61,165,0.3);\"></div>\n          </div>\n          <div data-id=\"area-2-1-1-1-2\" style=\"display:flex;flex-direction:column;gap:7px;margin-bottom:14px;\">\n            <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n              <span style=\"font-size:11px;color:#94a3b8;\">이용 한도</span>\n              <span style=\"font-size:12px;font-weight:600;color:#0f172a;\">₩5,000,000</span>\n            </div>\n            <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n              <span style=\"font-size:11px;color:#94a3b8;\">결제 예정 금액</span>\n              <span style=\"font-size:12px;font-weight:600;color:#003DA5;\">₩2,750,000</span>\n            </div>\n          </div>\n          <div data-id=\"area-2-1-1-1-3\" style=\"display:flex;align-items:center;justify-content:space-between;\">\n            <span style=\"display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#64748b;background:#f8fafc;padding:4px 9px;border-radius:99px;\">\n              <svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#10b981\" stroke-width=\"2.5\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><polygon points=\"10 8 16 12 10 16 10 8\" fill=\"#10b981\" stroke=\"none\"/></svg>\n              정상 이용중\n            </span>\n            <span style=\"font-size:10px;font-weight:600;color:#003DA5;\">상세 보기 →</span>\n          </div>\n        </article>\n\n        <!-- 카드 3: S-Line (일시정지) -->\n        <article data-id=\"comp-2-1-1-1\" style=\"background:white;border-radius:16px;box-shadow:0 2px 14px rgba(0,0,0,0.08);padding:16px;border:1px solid #f1f5f9;\">\n          <div data-id=\"area-2-1-1-1-1\" style=\"display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;\">\n            <div>\n              <div style=\"font-size:13px;font-weight:700;color:#0f172a;margin-bottom:3px;\">신한 체크카드 S-Line</div>\n              <div style=\"font-size:11px;color:#94a3b8;\">•••• 9012</div>\n            </div>\n            <div style=\"width:56px;height:32px;background:linear-gradient(135deg,#003DA5,#60a5fa);border-radius:10px;box-shadow:0 3px 8px rgba(0,61,165,0.3);\"></div>\n          </div>\n          <div data-id=\"area-2-1-1-1-2\" style=\"display:flex;flex-direction:column;gap:7px;margin-bottom:14px;\">\n            <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n              <span style=\"font-size:11px;color:#94a3b8;\">이용 한도</span>\n              <span style=\"font-size:12px;font-weight:600;color:#0f172a;\">₩1,000,000</span>\n            </div>\n            <div style=\"display:flex;justify-content:space-between;align-items:center;\">\n              <span style=\"font-size:11px;color:#94a3b8;\">결제 예정 금액</span>\n              <span style=\"font-size:12px;font-weight:600;color:#003DA5;\">₩350,000</span>\n            </div>\n          </div>\n          <div data-id=\"area-2-1-1-1-3\" style=\"display:flex;align-items:center;justify-content:space-between;\">\n            <span style=\"display:inline-flex;align-items:center;gap:5px;font-size:10px;color:#64748b;background:#f8fafc;padding:4px 9px;border-radius:99px;\">\n              <svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#f59e0b\" stroke-width=\"2.5\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><rect x=\"9\" y=\"8\" width=\"2\" height=\"8\" fill=\"#f59e0b\" stroke=\"none\"/><rect x=\"13\" y=\"8\" width=\"2\" height=\"8\" fill=\"#f59e0b\" stroke=\"none\"/></svg>\n              일시정지\n            </span>\n            <span style=\"font-size:10px;font-weight:600;color:#003DA5;\">상세 보기 →</span>\n          </div>\n        </article>\n\n      </div><!-- /comp-2-1-1 -->\n    </div><!-- /comp-2-1 -->\n  </div><!-- /comp-2 -->\n\n  <!-- PAGE 2 구분선 -->\n  <div style=\"height:2px;background:repeating-linear-gradient(90deg,#cbd5e1 0,#cbd5e1 8px,transparent 8px,transparent 16px);margin:12px 0 0;\"></div>\n  <div style=\"font-size:9px;font-weight:700;letter-spacing:1.2px;color:#94a3b8;padding:5px 14px;background:#f8fafc;border-bottom:1px dashed #e2e8f0;text-transform:uppercase;\">카드 상세 페이지</div>\n\n  <div data-id=\"comp-2-2\">\n\n    <!-- 카드 상세 정보 및 상태 패널 -->\n    <section data-id=\"area-2-2-1\" style=\"background:white;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.05);\">\n      <a href=\"#\" style=\"display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#94a3b8;text-decoration:none;margin-bottom:10px;\">\n        <svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#94a3b8\" stroke-width=\"2.5\"><path d=\"M19 12H5M12 5l-7 7 7 7\"/></svg>\n        대시보드로 돌아가기\n      </a>\n      <div style=\"margin-bottom:14px;\">\n        <h1 style=\"font-size:15px;font-weight:700;color:#0f172a;margin-bottom:3px;\">신한 Deep Dream 카드</h1>\n        <p style=\"font-size:11px;color:#94a3b8;\">•••• 1234 · 정상 이용중</p>\n      </div>\n      <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:10px;\">\n        <div style=\"background:#f8fafc;border-radius:12px;padding:12px 14px;\">\n          <div style=\"font-size:10px;color:#94a3b8;margin-bottom:5px;\">이용 한도</div>\n          <div style=\"font-size:14px;font-weight:700;color:#0f172a;\">₩3,000,000</div>\n        </div>\n        <div style=\"background:#f8fafc;border-radius:12px;padding:12px 14px;\">\n          <div style=\"font-size:10px;color:#94a3b8;margin-bottom:5px;\">결제 예정 금액</div>\n          <div style=\"font-size:14px;font-weight:700;color:#003DA5;\">₩1,250,000</div>\n        </div>\n      </div>\n    </section>\n\n    <div style=\"height:8px;background:#f1f5f9;\"></div>\n\n    <!-- 이용 내역 테이블 -->\n    <div data-id=\"comp-2-2-1\">\n      <section data-id=\"area-2-2-1-1\" style=\"background:white;padding:16px;\">\n        <div style=\"display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;\">\n          <h2 style=\"font-size:13px;font-weight:700;color:#0f172a;\">이용 내역</h2>\n          <span style=\"font-size:11px;color:#94a3b8;\">최근 3건의 내역입니다.</span>\n        </div>\n        <div style=\"border:1px solid #f1f5f9;border-radius:12px;overflow:hidden;\">\n          <table style=\"font-size:11px;\">\n            <thead>\n              <tr style=\"background:#f8fafc;border-bottom:1px solid #e2e8f0;\">\n                <th style=\"padding:9px 10px;text-align:left;font-weight:600;color:#64748b;white-space:nowrap;\">이용일</th>\n                <th style=\"padding:9px 10px;text-align:left;font-weight:600;color:#64748b;\">가맹점</th>\n                <th style=\"padding:9px 8px;text-align:right;font-weight:600;color:#64748b;white-space:nowrap;\">금액</th>\n                <th style=\"padding:9px 6px;text-align:center;font-weight:600;color:#64748b;white-space:nowrap;\">승인 상태</th>\n                <th style=\"padding:9px 10px;text-align:left;font-weight:600;color:#64748b;\">구분</th>\n              </tr>\n            </thead>\n            <tbody>\n              <tr style=\"border-top:1px solid #f1f5f9;\">\n                <td style=\"padding:9px 10px;color:#475569;white-space:nowrap;\">2026-03-08</td>\n                <td style=\"padding:9px 10px;color:#1e293b;\">스타벅스 코리아</td>\n                <td style=\"padding:9px 8px;text-align:right;font-weight:600;color:#0f172a;white-space:nowrap;\">₩5,800</td>\n                <td style=\"padding:9px 6px;text-align:center;\"><span style=\"background:#f0fdf4;color:#16a34a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;\">승인</span></td>\n                <td style=\"padding:9px 10px;color:#94a3b8;\">카페/간식</td>\n              </tr>\n              <tr style=\"border-top:1px solid #f1f5f9;\">\n                <td style=\"padding:9px 10px;color:#475569;white-space:nowrap;\">2026-03-07</td>\n                <td style=\"padding:9px 10px;color:#1e293b;\">쿠팡</td>\n                <td style=\"padding:9px 8px;text-align:right;font-weight:600;color:#0f172a;white-space:nowrap;\">₩89,000</td>\n                <td style=\"padding:9px 6px;text-align:center;\"><span style=\"background:#f0fdf4;color:#16a34a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;\">승인</span></td>\n                <td style=\"padding:9px 10px;color:#94a3b8;\">온라인쇼핑</td>\n              </tr>\n              <tr style=\"border-top:1px solid #f1f5f9;\">\n                <td style=\"padding:9px 10px;color:#475569;white-space:nowrap;\">2026-03-05</td>\n                <td style=\"padding:9px 10px;color:#1e293b;\">GS칼텍스 주유소</td>\n                <td style=\"padding:9px 8px;text-align:right;font-weight:600;color:#0f172a;white-space:nowrap;\">₩65,000</td>\n                <td style=\"padding:9px 6px;text-align:center;\"><span style=\"background:#f0fdf4;color:#16a34a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;\">승인</span></td>\n                <td style=\"padding:9px 10px;color:#94a3b8;\">주유</td>\n              </tr>\n            </tbody>\n          </table>\n        </div>\n      </section>\n    </div>\n\n    <div style=\"height:8px;background:#f1f5f9;\"></div>\n\n    <!-- 카드 관리 메뉴 -->\n    <div data-id=\"comp-2-2-2\">\n      <section style=\"background:white;padding:16px 16px 24px;\">\n        <div data-id=\"area-2-2-2-1\" style=\"margin-bottom:14px;\">\n          <h2 style=\"font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px;\">카드 관리</h2>\n          <p style=\"font-size:11px;color:#94a3b8;\">카드 이용 설정과 분실 신고를 빠르게 처리할 수 있습니다. (데모 화면으로, 실제로 변경되지는 않습니다.)</p>\n        </div>\n        <div style=\"display:flex;flex-direction:column;gap:10px;\">\n          <button data-id=\"area-2-2-2-2\" style=\"display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border:1px solid #e2e8f0;border-radius:12px;background:white;font-size:12px;color:#1e293b;width:100%;text-align:left;\">\n            <span style=\"display:flex;align-items:center;gap:8px;\">\n              <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#f59e0b\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><rect x=\"9\" y=\"8\" width=\"2\" height=\"8\"/><rect x=\"13\" y=\"8\" width=\"2\" height=\"8\"/></svg>\n              카드 일시정지\n            </span>\n            <span style=\"font-size:10px;color:#94a3b8;\">설정 이동</span>\n          </button>\n          <button data-id=\"area-2-2-2-3\" style=\"display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border:1px solid #e2e8f0;border-radius:12px;background:white;font-size:12px;color:#1e293b;width:100%;text-align:left;\">\n            <span style=\"display:flex;align-items:center;gap:8px;\">\n              <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#003DA5\" stroke-width=\"2\"><line x1=\"4\" y1=\"21\" x2=\"4\" y2=\"14\"/><line x1=\"4\" y1=\"10\" x2=\"4\" y2=\"3\"/><line x1=\"12\" y1=\"21\" x2=\"12\" y2=\"12\"/><line x1=\"12\" y1=\"8\" x2=\"12\" y2=\"3\"/><line x1=\"20\" y1=\"21\" x2=\"20\" y2=\"16\"/><line x1=\"20\" y1=\"12\" x2=\"20\" y2=\"3\"/><line x1=\"1\" y1=\"14\" x2=\"7\" y2=\"14\"/><line x1=\"9\" y1=\"8\" x2=\"15\" y2=\"8\"/><line x1=\"17\" y1=\"16\" x2=\"23\" y2=\"16\"/></svg>\n              한도 변경\n            </span>\n            <span style=\"font-size:10px;color:#94a3b8;\">신청 이동</span>\n          </button>\n          <button data-id=\"area-2-2-2-4\" style=\"display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border:1px solid #fee2e2;border-radius:12px;background:#fff5f5;font-size:12px;font-weight:700;color:#dc2626;width:100%;text-align:left;\">\n            <span style=\"display:flex;align-items:center;gap:8px;\">\n              <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#dc2626\" stroke-width=\"2\"><path d=\"M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z\"/><line x1=\"12\" y1=\"9\" x2=\"12\" y2=\"13\"/><line x1=\"12\" y1=\"17\" x2=\"12.01\" y2=\"17\"/></svg>\n              분실·도난 신고\n            </span>\n            <span style=\"font-size:10px;color:#fca5a5;\">신고 바로가기</span>\n          </button>\n        </div>\n      </section>\n    </div>\n\n  </div><!-- /comp-2-2 -->\n\n</div>\n</body>\n</html>"
   }
 }

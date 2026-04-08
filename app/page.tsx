@@ -1,5 +1,22 @@
 "use client"
 
+/**
+ * ⚠️ IMPORTANT: DO NOT MODIFY LAYOUT STRUCTURE ⚠️
+ * 
+ * - 퍼블리셔가 만든 HTML 구조(div, className)는 절대 변경 금지
+ * - DOM 구조 변경 금지 (추가/삭제/순서 변경 금지)
+ * - className 수정 금지
+ * 
+ * ✅ 허용:
+ * - 상태(state) 로직
+ * - API 호출
+ * - 이벤트 핸들러
+ * 
+ * ❌ 금지:
+ * - div 추가/삭제/이동
+ * - className 변경
+ */
+
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import {
