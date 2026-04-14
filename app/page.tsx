@@ -161,6 +161,18 @@ const collectAreaCodes = (comp: Component): string => {
   return parts.join("\n\n")
 }
 
+/** Project Tree 초기 로드 시 전체 comp 노드 펼침용 id 목록 */
+const collectAllComponentIds = (components: Component[]): string[] => {
+  const ids: string[] = []
+  for (const c of components) {
+    ids.push(c.id)
+    if (c.children?.length) {
+      ids.push(...collectAllComponentIds(c.children))
+    }
+  }
+  return ids
+}
+
 // ─── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
 const INITIAL_DATA = ((analysisData as any).data ?? analysisData) as Hierarchy
@@ -171,8 +183,10 @@ export default function WorkspacePage() {
 
   // JSON에서 직접 초기화 (API 호출 없음)
   const [hierarchy, setHierarchy] = useState<Hierarchy>(INITIAL_DATA)
-  const [expandedComponents, setExpandedComponents] = useState<string[]>(
-    INITIAL_DATA.components?.length ? [INITIAL_DATA.components[0].id] : []
+  const [expandedComponents, setExpandedComponents] = useState<string[]>(() =>
+    INITIAL_DATA.components?.length
+      ? collectAllComponentIds(INITIAL_DATA.components)
+      : []
   )
   const [selection, setSelection] = useState<SelectionTarget>(
     INITIAL_DATA.components?.length
@@ -185,8 +199,8 @@ export default function WorkspacePage() {
   const [modifyError, setModifyError] = useState<string | null>(null)
   const [modifyResult, setModifyResult] = useState<ModifyResult | null>(null)
 
-  const [activeTab, setActiveTab] = useState<"PREVIEW" | "FLOW" | "DIAGRAM" | "DIFF">("PREVIEW")
-  const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "DIFF"]
+  const [activeTab, setActiveTab] = useState<"PREVIEW" | "FLOW" | "DIAGRAM" | "COMPARE">("PREVIEW")
+  const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "COMPARE"]
   const [checkedDescriptions, setCheckedDescriptions] = useState<Record<string, boolean>>({})
   // 체크된 항목의 편집된 텍스트 (key: `${id}-${idx}`, value: 편집 중인 텍스트)
   const [editedDescriptions, setEditedDescriptions] = useState<Record<string, string>>({})
@@ -271,7 +285,7 @@ export default function WorkspacePage() {
       } else {
         setDiagramChangedNodes([])
       }
-      setActiveTab("DIFF")
+      setActiveTab("DIAGRAM")
     } catch (e: any) {
       const msg =
         e?.response?.data?.detail || e?.message || "수정에 실패했습니다."
@@ -795,8 +809,8 @@ export default function WorkspacePage() {
           <div className="flex items-center justify-between px-4 py-4">
             <div className="flex items-center">
 {tabs.map((tab) => {
-  const isDiff = tab === "DIFF"
-  const isDisabled = isDiff && !modifyResult
+  const isCompare = tab === "COMPARE"
+  const isDisabled = isCompare && !modifyResult
   return (
   <button
   key={tab}
@@ -811,7 +825,7 @@ export default function WorkspacePage() {
   }`}
   >
   {tab}
-  {isDiff && modifyResult && <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />}
+  {isCompare && modifyResult && <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />}
   </button>
   )
   })}
@@ -977,7 +991,7 @@ export default function WorkspacePage() {
               </div>
             )}
 
-            {activeTab === "DIFF" && modifyResult && (
+            {activeTab === "COMPARE" && modifyResult && (
               <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
                 {/* 파일명 헤더 */}
                 <div className="flex items-center gap-3 mb-4">
