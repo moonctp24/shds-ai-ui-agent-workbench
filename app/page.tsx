@@ -201,6 +201,7 @@ export default function WorkspacePage() {
 
   const [activeTab, setActiveTab] = useState<"PREVIEW" | "FLOW" | "DIAGRAM" | "COMPARE">("PREVIEW")
   const tabs = ["PREVIEW", "FLOW", "DIAGRAM", "COMPARE"]
+  const [compareTab, setCompareTab] = useState<"files" | "detail">("files")
   const [checkedDescriptions, setCheckedDescriptions] = useState<Record<string, boolean>>({})
   // 체크된 항목의 편집된 텍스트 (key: `${id}-${idx}`, value: 편집 중인 텍스트)
   const [editedDescriptions, setEditedDescriptions] = useState<Record<string, string>>({})
@@ -755,7 +756,7 @@ export default function WorkspacePage() {
         </aside>
         
         {/* Center Group - Project Tree */}
-        <div className="flex-[1.33] flex flex-col overflow-hidden">
+        <div className="flex-[1] flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-6 pt-4">
             <div className="flex gap-2.5">
               <div className="w-7 h-7 rounded-md flex items-center justify-center">
@@ -805,30 +806,30 @@ export default function WorkspacePage() {
         </div>
 
         {/* Right Group - Tabs & Preview */}
-        <aside className="flex-[1.7] flex flex-col bg-white overflow-hidden">
+        <aside className="flex-[2] flex flex-col bg-white overflow-hidden">
           <div className="flex items-center justify-between px-4 py-4">
             <div className="flex items-center">
-{tabs.map((tab) => {
-  const isCompare = tab === "COMPARE"
-  const isDisabled = isCompare && !modifyResult
-  return (
-  <button
-  key={tab}
-  onClick={() => !isDisabled && setActiveTab(tab as typeof activeTab)}
-  disabled={isDisabled}
-  className={`px-4 py-1.5 mr-0.5 text-[14px] font-medium rounded-full transition-all flex items-center gap-1.5 ${
-  activeTab === tab
-  ? "bg-[#0f172a] text-white shadow-sm"
-  : isDisabled
-  ? "text-[#cbd5e1] cursor-not-allowed"
-  : "text-[#64748b] hover:text-[#0f172a]"
-  }`}
-  >
-  {tab}
-  {isCompare && modifyResult && <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />}
-  </button>
-  )
-  })}
+              {tabs.map((tab) => {
+                const isCompare = tab === "COMPARE"
+                const isDisabled = isCompare && !modifyResult
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => !isDisabled && setActiveTab(tab as typeof activeTab)}
+                    disabled={isDisabled}
+                    className={`px-4 py-1.5 mr-0.5 text-[14px] font-medium rounded-full transition-all flex items-center gap-1.5 ${
+                    activeTab === tab
+                    ? "bg-[#0f172a] text-white shadow-sm"
+                    : isDisabled
+                    ? "text-[#cbd5e1] cursor-not-allowed"
+                    : "text-[#64748b] hover:text-[#0f172a]"
+                    }`}
+                  >
+                    {tab}
+                    {isCompare && modifyResult && <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />}
+                  </button>
+                )
+              })}
             </div>
 
             <button className="w-8 h-8 rounded-full border border-[#e4eaf2] flex items-center justify-center hover:bg-[#f8fafc] transition-colors">
@@ -844,13 +845,13 @@ export default function WorkspacePage() {
           <div className="flex-1 flex items-center justify-center px-6 pt-5 pb-8 overflow-hidden">
             {activeTab === "PREVIEW" && (
               /* iPhone Frame */
-              <div className="w-[453px] h-[877px] bg-[#1a1a1a] rounded-[40px] p-3 shadow-xl">
+              <div className="h-full aspect-[9/19.5] max-h-full bg-[#1a1a1a] rounded-[40px] p-2 shadow-xl">
                 <div className="w-full h-full bg-[#f5f5f5] rounded-[32px] relative overflow-hidden">
                   {/* Notch */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120px] h-[28px] bg-[#1a1a1a] rounded-b-2xl" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90px] h-[24px] bg-[#1a1a1a] rounded-b-2xl z-10" />
                   
                   {/* Screen Content */}
-                  <div className="w-full h-full overflow-y-auto px-5 pt-10 pb-6">
+                  <div className="w-full h-full overflow-y-auto px-3 pt-8 pb-4">
                     {!hierarchy?.components?.length ? (
                       <div className="h-full flex items-center justify-center">
                         <div className="text-center">
@@ -878,8 +879,8 @@ export default function WorkspacePage() {
                       </div>
                     )}
                   </div>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-                    <div className="w-[100px] h-[4px] bg-[#1a1a1a] rounded-full" />
+                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2">
+                    <div className="w-[80px] h-[3px] bg-[#1a1a1a] rounded-full" />
                   </div>
                 </div>
               </div>
@@ -992,62 +993,112 @@ export default function WorkspacePage() {
             )}
 
             {activeTab === "COMPARE" && modifyResult && (
-              <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-8 overflow-y-auto">
-                {/* 파일명 헤더 */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca]">
-                    <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
-                    <span className="text-[11px] font-medium text-[#ef4444]">Before</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0fdf4] border border-[#bbf7d0]">
-                    <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
-                    <span className="text-[11px] font-medium text-[#22c55e]">After</span>
-                  </div>
-                  <span className="text-[11px] text-[#94a3b8] ml-auto font-mono">
-                    {modifyResult.source_file}
-                  </span>
+              <div className="w-full h-full bg-[#f8fafc] rounded-2xl p-6 overflow-hidden flex flex-col">
+                {/* 내부 탭 */}
+                <div className="flex items-center gap-2 mb-4">
+                  <button
+                    onClick={() => setCompareTab("files")}
+                    className={`px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all ${
+                      compareTab === "files"
+                        ? "bg-[#8b5cf6] text-white"
+                        : "bg-white border border-[#e4eaf2] text-[#64748b] hover:border-[#8b5cf6]"
+                    }`}
+                  >
+                    파일목록
+                  </button>
+                  <button
+                    onClick={() => setCompareTab("detail")}
+                    className={`px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all ${
+                      compareTab === "detail"
+                        ? "bg-[#8b5cf6] text-white"
+                        : "bg-white border border-[#e4eaf2] text-[#64748b] hover:border-[#8b5cf6]"
+                    }`}
+                  >
+                    상세비교
+                  </button>
                 </div>
-
-                {/* Diff Viewer */}
-                <div className="rounded-xl overflow-hidden border border-[#e4eaf2] text-[12px]">
-                  <ReactDiffViewer
-                    oldValue={modifyResult.original_code}
-                    newValue={modifyResult.modified_code}
-                    splitView={true}
-                    leftTitle="Before"
-                    rightTitle="After"
-                    useDarkTheme={false}
-                    hideLineNumbers={false}
-                    styles={{
-                      variables: {
-                        light: {
-                          diffViewerBackground: "#ffffff",
-                          addedBackground: "#f0fdf4",
-                          addedColor: "#166534",
-                          removedBackground: "#fef2f2",
-                          removedColor: "#991b1b",
-                          wordAddedBackground: "#bbf7d0",
-                          wordRemovedBackground: "#fecaca",
-                          addedGutterBackground: "#dcfce7",
-                          removedGutterBackground: "#fee2e2",
-                          gutterBackground: "#f8fafc",
-                          gutterBackgroundDark: "#f1f5f9",
-                          highlightBackground: "#fefce8",
-                          highlightGutterBackground: "#fef9c3",
-                          codeFoldBackground: "#f1f5f9",
-                          emptyLineBackground: "#f8fafc",
-                          codeFoldContentColor: "#94a3b8",
-                          diffViewerTitleBackground: "#f8fafc",
-                          diffViewerTitleColor: "#0f172a",
-                          diffViewerTitleBorderColor: "#e4eaf2",
-                        },
-                      },
-                      line: { fontSize: "12px", fontFamily: "monospace" },
-                      gutter: { fontSize: "11px", minWidth: "40px" },
-                      titleBlock: { fontSize: "12px", fontWeight: "600" },
-                    }}
-                  />
-                </div>
+              
+                {compareTab === "files" ? (
+                  /* 파일목록 탭 */
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="space-y-2">
+                      <div
+                        onClick={() => setCompareTab("detail")}
+                        className="flex items-center gap-3 p-4 bg-white rounded-xl border border-[#e4eaf2] hover:border-[#8b5cf6] cursor-pointer transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-[#8b5cf6]/10 flex items-center justify-center">
+                          <FileCode2 className="w-5 h-5 text-[#8b5cf6]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-medium text-[#0f172a] truncate">{modifyResult.source_file}</p>
+                          <p className="text-[12px] text-[#94a3b8]">수정됨</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <ChevronRight className="w-4 h-4 text-[#94a3b8]" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* 상세비교 탭 */
+                  <div className="flex-1 overflow-y-auto">
+                    {/* 파일명 헤더 */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca]">
+                        <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
+                        <span className="text-[11px] font-medium text-[#ef4444]">Before</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0fdf4] border border-[#bbf7d0]">
+                        <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
+                        <span className="text-[11px] font-medium text-[#22c55e]">After</span>
+                      </div>
+                      <span className="text-[11px] text-[#94a3b8] ml-auto font-mono">
+                        {modifyResult.source_file}
+                      </span>
+                    </div>
+              
+                    {/* Diff Viewer */}
+                    <div className="rounded-xl overflow-hidden border border-[#e4eaf2] text-[12px]">
+                      <ReactDiffViewer
+                        oldValue={modifyResult.original_code}
+                        newValue={modifyResult.modified_code}
+                        splitView={true}
+                        leftTitle="Before"
+                        rightTitle="After"
+                        useDarkTheme={false}
+                        hideLineNumbers={false}
+                        styles={{
+                          variables: {
+                            light: {
+                              diffViewerBackground: "#ffffff",
+                              addedBackground: "#f0fdf4",
+                              addedColor: "#166534",
+                              removedBackground: "#fef2f2",
+                              removedColor: "#991b1b",
+                              wordAddedBackground: "#bbf7d0",
+                              wordRemovedBackground: "#fecaca",
+                              addedGutterBackground: "#dcfce7",
+                              removedGutterBackground: "#fee2e2",
+                              gutterBackground: "#f8fafc",
+                              gutterBackgroundDark: "#f1f5f9",
+                              highlightBackground: "#fefce8",
+                              highlightGutterBackground: "#fef9c3",
+                              codeFoldBackground: "#f1f5f9",
+                              emptyLineBackground: "#f8fafc",
+                              codeFoldContentColor: "#94a3b8",
+                              diffViewerTitleBackground: "#f8fafc",
+                              diffViewerTitleColor: "#0f172a",
+                              diffViewerTitleBorderColor: "#e4eaf2",
+                            },
+                          },
+                          line: { fontSize: "12px", fontFamily: "monospace" },
+                          gutter: { fontSize: "11px", minWidth: "40px" },
+                          titleBlock: { fontSize: "12px", fontWeight: "600" },
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
