@@ -567,11 +567,17 @@ export default function WorkspacePage() {
                     원문
                   </h3>
                   <div className="flex-1 bg-[#e4eaf2] rounded-xl p-4 min-h-[140px]">
-                    <p className="text-[14px] text-[#94a3b8] leading-relaxed">
-                      {Array.isArray(selection.data.description)
-                        ? selection.data.description.join(" ")
-                        : (selection.data.description ?? "")}
-                    </p>
+                    <ul className="space-y-1.5 list-none">
+                      {(Array.isArray(selection.data.description)
+                        ? selection.data.description
+                        : [selection.data.description ?? ""]
+                      ).filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((sentence, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[13px] text-[#64748b] leading-relaxed">
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
+                          <span>{sentence}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </div>
@@ -585,11 +591,17 @@ export default function WorkspacePage() {
                     원문
                   </h3>
                   <div className="flex-1 bg-[#e4eaf2] rounded-xl p-4 min-h-[100px]">
-                    <p className="text-[14px] text-[#94a3b8] leading-relaxed">
-                      {Array.isArray(selection.data.description)
-                        ? selection.data.description.join(" ")
-                        : (selection.data.description ?? "")}
-                    </p>
+                    <ul className="space-y-1.5 list-none">
+                      {(Array.isArray(selection.data.description)
+                        ? selection.data.description
+                        : [selection.data.description ?? ""]
+                      ).filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((sentence, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[13px] text-[#64748b] leading-relaxed">
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
+                          <span>{sentence}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
                 {/* 마이크로 요구사항 섹션 */}
