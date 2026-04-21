@@ -70,12 +70,12 @@ function MermaidDiagramClient({ chart }: { chart: string }) {
       <div ref={ref} className={`w-full overflow-x-auto p-4 bg-white rounded-xl border ${renderError ? "border-red-200 hidden" : "border-[#e4eaf2]"}`} />
       {renderError && (
         <div className="flex flex-col items-center gap-3 py-6 px-4 bg-red-50 border border-red-200 rounded-xl">
-          <p className="text-[12px] text-red-500 text-center">
+          <p className="text-[13px] text-red-500 text-center">
             다이어그램 렌더링에 실패했습니다.
           </p>
           <button
             onClick={() => setRetryKey(k => k + 1)}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-red-300 hover:border-red-400 hover:bg-red-50 text-red-600 text-[12px] font-medium rounded-lg transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-red-300 hover:border-red-400 hover:bg-red-50 text-red-600 text-[13px] font-medium rounded-lg transition-colors shadow-sm"
           >
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -350,7 +350,7 @@ export default function WorkspacePage() {
     const isButton = type === "button"
 
     const sharedTag = (
-      <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded ${s.tagCls} text-white`}>
+      <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${s.tagCls} text-white`}>
         {s.tag}
       </span>
     )
@@ -363,7 +363,7 @@ export default function WorkspacePage() {
           style={isBanner || isButton ? undefined : { maxWidth: "240px" }}
         >
           {sharedTag}
-          <span className="text-[11px] font-medium text-white/85 truncate">{area.name}</span>
+          <span className="text-[12px] font-medium text-white/85 truncate">{area.name}</span>
         </div>
       )
     }
@@ -375,7 +375,7 @@ export default function WorkspacePage() {
         style={isBanner || isButton ? undefined : { maxWidth: "240px" }}
       >
         {sharedTag}
-        <span className="text-[11px] font-semibold text-[#0f172a] truncate">{area.name}</span>
+        <span className="text-[12px] font-semibold text-[#0f172a] truncate">{area.name}</span>
       </div>
     )
   }
@@ -413,7 +413,7 @@ export default function WorkspacePage() {
             ? <div className={`w-1.5 h-1.5 rounded-sm shrink-0 ${isOnDark ? "bg-slate-500" : "bg-slate-300"}`} />
             : <ChevronRight className={`w-3 h-3 shrink-0 ${isOnDark ? "text-white/30" : "text-[#94a3b8]"}`} />
           }
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${labelColor}`}>
+          <span className={`text-[11px] font-bold uppercase tracking-widest ${labelColor}`}>
             {comp.name}
           </span>
         </div>
@@ -471,7 +471,7 @@ export default function WorkspacePage() {
             ) : (
               <span className={`w-1.5 h-1.5 rounded-full ml-0.5 ${isCompSelected ? "bg-white" : "bg-[#8b5cf6]"} group-hover:text-white`} />
             )}
-            <span className={`text-[15px] ${isCompSelected ? "text-white font-medium" : "text-[#475569]"} group-hover:text-white`}>
+            <span className={`text-[16px] ${isCompSelected ? "text-white font-medium" : "text-[#475569]"} group-hover:text-white`}>
               {comp.name}
             </span>
           </div>
@@ -510,9 +510,9 @@ export default function WorkspacePage() {
                 <path d="M11.5857 25L20.0611 29.2164C20.349 29.3596 20.6881 29.3557 20.9726 29.2058L28.9571 25" stroke="white" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </div>
-            <span className="text-[18px] font-semibold text-[#0f172a]">Workspace</span>
+            <span className="text-[19px] font-semibold text-[#0f172a]">Workspace</span>
             {/* 버전 배지 */}
-            <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[#8b5cf6]/20 text-[#8b5cf6] border border-[#8b5cf6]/40 ml-auto">
+            <span className="text-[12px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[#8b5cf6]/20 text-[#8b5cf6] border border-[#8b5cf6]/40 ml-auto">
               v1.{minorVersion}
             </span>
           </div>
@@ -521,7 +521,7 @@ export default function WorkspacePage() {
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setActiveRenderMode("batch")}
-                className={`flex-1 h-13 rounded-lg flex items-center justify-center gap-2 text-[13px] font-medium transition-colors ${
+                className={`flex-1 h-13 rounded-lg flex items-center justify-center gap-2 text-[14px] font-medium transition-colors ${
                   activeRenderMode === "batch"
                     ? "bg-[#8b5cf6] text-white"
                     : "bg-[#e4eaf2] text-[#94a3b8] hover:bg-[#d9e0e8]"
@@ -532,7 +532,7 @@ export default function WorkspacePage() {
               </button>
               <button
                 onClick={() => setActiveRenderMode("individual")}
-                className={`flex-1 h-13 rounded-lg flex items-center justify-center gap-2 text-[13px] font-medium transition-colors ${
+                className={`flex-1 h-13 rounded-lg flex items-center justify-center gap-2 text-[14px] font-medium transition-colors ${
                   activeRenderMode === "individual"
                     ? "bg-[#8b5cf6] text-white"
                     : "bg-[#e4eaf2] text-[#94a3b8] hover:bg-[#d9e0e8]"
@@ -548,21 +548,21 @@ export default function WorkspacePage() {
             </div>
 
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[14px] font-semibold text-[#475569] tracking-widest">SCENARIO EDITOR</span>
-              <span className="px-2 py-1 bg-[#f1f5f9] text-[#64748b] text-[11px] font-medium rounded">
+              <span className="text-[15px] font-semibold text-[#475569] tracking-widest">SCENARIO EDITOR</span>
+              <span className="px-2 py-1 bg-[#f1f5f9] text-[#64748b] text-[12px] font-medium rounded">
                 Auto Saved
               </span>
             </div>
             
             {!selection || selection.type !== "component" ? (
               <div className="flex-1 border-2 border-dashed border-[#c8d2e1] rounded-xl h-full flex items-center justify-center mb-4">
-                <p className="text-[14px] text-[#94a3b8]">항목을 선택하세요.</p>
+                <p className="text-[15px] text-[#94a3b8]">항목을 선택하세요.</p>
               </div>
             ) : (selection.data.children?.length ?? 0) > 0 ? (
               /* 비리프 comp (자식 있음) → description 줄글 */
               <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                 <div>
-                  <h3 className="text-[14px] font-medium text-[#475569] mb-2 flex items-center gap-1">
+                  <h3 className="text-[15px] font-medium text-[#475569] mb-2 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
                     원문
                   </h3>
@@ -572,7 +572,7 @@ export default function WorkspacePage() {
                         ? selection.data.description
                         : [selection.data.description ?? ""]
                       ).filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((sentence, i) => (
-                        <li key={i} className="flex items-start gap-2 text-[13px] text-[#64748b] leading-relaxed">
+                        <li key={i} className="flex items-start gap-2 text-[14px] text-[#64748b] leading-relaxed">
                           <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
                           <span>{sentence}</span>
                         </li>
@@ -586,7 +586,7 @@ export default function WorkspacePage() {
               <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                 {/* 원문 섹션 */}
                 <div>
-                  <h3 className="text-[14px] font-medium text-[#475569] mb-2 flex items-center gap-1">
+                  <h3 className="text-[15px] font-medium text-[#475569] mb-2 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
                     원문
                   </h3>
@@ -596,7 +596,7 @@ export default function WorkspacePage() {
                         ? selection.data.description
                         : [selection.data.description ?? ""]
                       ).filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((sentence, i) => (
-                        <li key={i} className="flex items-start gap-2 text-[13px] text-[#64748b] leading-relaxed">
+                        <li key={i} className="flex items-start gap-2 text-[14px] text-[#64748b] leading-relaxed">
                           <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
                           <span>{sentence}</span>
                         </li>
@@ -606,11 +606,11 @@ export default function WorkspacePage() {
                 </div>
                 {/* 마이크로 요구사항 섹션 */}
                 <div>
-                  <h3 className="text-[12px] font-medium text-[#8b5cf6] mb-2 flex items-center gap-1">
+                  <h3 className="text-[13px] font-medium text-[#8b5cf6] mb-2 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
                     마이크로 요구사항
                   </h3>
-                  <p className="text-[10px] text-[#94a3b8] mb-3">항목을 선택하면 직접 편집할 수 있습니다.</p>
+                  <p className="text-[12px] text-[#94a3b8] mb-3">항목을 선택하면 직접 편집할 수 있습니다.</p>
                   <div className="space-y-2">
                     {selection.data.areas.map((area) => {
                       const key = area.id
@@ -653,10 +653,10 @@ export default function WorkspacePage() {
                                 setEditedDescriptions(prev => ({ ...prev, [key]: e.target.value }))
                               }
                               rows={Math.max(2, Math.ceil(editedText.length / 28))}
-                              className="flex-1 text-[12px] text-[#0f172a] bg-transparent border-none resize-none focus:outline-none min-h-[60px] leading-relaxed"
+                              className="flex-1 text-[13px] text-[#0f172a] bg-transparent border-none resize-none focus:outline-none min-h-[60px] leading-relaxed"
                             />
                           ) : (
-                            <span className="flex-1 text-[12px] text-[#0f172a] leading-relaxed whitespace-pre-line">{area.name}</span>
+                            <span className="flex-1 text-[13px] text-[#0f172a] leading-relaxed whitespace-pre-line">{area.name}</span>
                           )}
                           <button 
                             onClick={() => {}}
@@ -686,7 +686,7 @@ export default function WorkspacePage() {
                           }
                           placeholder="추가 수정 내용을 입력하세요..."
                           rows={Math.max(2, Math.ceil((item.text.length || 20) / 28))}
-                          className="flex-1 text-[12px] text-[#0f172a] bg-transparent border-none resize-none focus:outline-none min-h-[60px] leading-relaxed placeholder:text-[#94a3b8]"
+                          className="flex-1 text-[13px] text-[#0f172a] bg-transparent border-none resize-none focus:outline-none min-h-[60px] leading-relaxed placeholder:text-[#94a3b8]"
                         />
                         <button
                           onClick={() => setAddedItems(prev => prev.filter(i => i.id !== item.id))}
@@ -708,7 +708,7 @@ export default function WorkspacePage() {
                       className="w-full h-10 border-2 border-dashed border-[#c8d2e1] rounded-lg flex items-center justify-center gap-1 text-[#94a3b8] hover:border-[#8b5cf6] hover:text-[#8b5cf6] transition-colors"
                     >
                       <span className="text-lg">+</span>
-                      <span className="text-[12px] font-medium">새로운 내용 추가</span>
+                      <span className="text-[13px] font-medium">새로운 내용 추가</span>
                     </button>
                   </div>
                 </div>
@@ -717,12 +717,12 @@ export default function WorkspacePage() {
               /* 리프 comp인데 areas도 없는 경우 → description 줄글 */
               <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                 <div>
-                  <h3 className="text-[14px] font-medium text-[#475569] mb-2 flex items-center gap-1">
+                  <h3 className="text-[15px] font-medium text-[#475569] mb-2 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
                     원문
                   </h3>
                   <div className="flex-1 bg-[#e4eaf2] rounded-xl p-4 min-h-[140px]">
-                    <p className="text-[14px] text-[#94a3b8] leading-relaxed">
+                    <p className="text-[15px] text-[#94a3b8] leading-relaxed">
                       {Array.isArray(selection.data.description)
                         ? selection.data.description.join(" ")
                         : (selection.data.description ?? "설명이 없습니다.")}
@@ -734,7 +734,7 @@ export default function WorkspacePage() {
 
             {/* 기획 수정 버튼 */}
             <div className="mt-auto pt-4">
-              <span className="text-[14px] font-semibold text-[#475569] tracking-widest mb-3 block">NEW SCENARIO</span>
+              <span className="text-[15px] font-semibold text-[#475569] tracking-widest mb-3 block">NEW SCENARIO</span>
               {selection ? (
                 <>
                   <button
@@ -752,14 +752,14 @@ export default function WorkspacePage() {
                       <rect x="11.4167" y="11.395" width="3.83333" height="3.85498" stroke="#fff" strokeWidth="1.5"/>
                       <path d="M13.3333 10.645V8.41373H8.2222M3.11108 10.645V8.41373H8.2222M8.2222 8.41373V4.84375" stroke="#fff"/>
                     </svg>
-                    <span className="text-[16px] font-medium">{modifyLoading ? "기획 수정 중..." : "기획 수정"}</span>
+                    <span className="text-[17px] font-medium">{modifyLoading ? "기획 수정 중..." : "분석설계 수정"}</span>
                   </button>
                   {modifyError && (
-                    <p className="text-[11px] text-red-500 mt-1.5">{modifyError}</p>
+                    <p className="text-[12px] text-red-500 mt-1.5">{modifyError}</p>
                   )}
                 </>
               ) : (
-                <p className="text-[12px] text-[#94a3b8]">
+                <p className="text-[13px] text-[#94a3b8]">
                   항목을 선택하면 기획서 수정이 가능합니다.
                 </p>
               )}
@@ -778,8 +778,8 @@ export default function WorkspacePage() {
                 </svg>
               </div>
               <div className="flex flex-col">
-                <span className="text-[18px] font-semibold text-[#0f172a]">Project Tree</span>
-                <span className="text-[14px] text-[#94a3b8] tracking-wide">1-2-3 HIERARCHY</span>
+                <span className="text-[19px] font-semibold text-[#0f172a]">Project Tree</span>
+                <span className="text-[15px] text-[#94a3b8] tracking-wide">1-2-3 HIERARCHY</span>
               </div>
             </div>
             
@@ -796,12 +796,12 @@ export default function WorkspacePage() {
           <div className="flex-1 px-6 pt-5 pb-8 flex flex-col">
             <div className="bg-[#0F172A] rounded-xl px-5 py-4 mb-8 flex items-center justify-between">
               <div>
-                <span className="text-[12px] text-white/70 uppercase tracking-wider">ACTIVE PLAN</span>
-                <h2 className="text-[16px] font-semibold text-white mt-0.5">{hierarchy?.repository ?? "분석 대기"}</h2>
+                <span className="text-[13px] text-white/70 uppercase tracking-wider">ACTIVE PLAN</span>
+                <h2 className="text-[17px] font-semibold text-white mt-0.5">{hierarchy?.repository ?? "분석 대기"}</h2>
               </div>
               <div className="text-right">
-                <span className="px-2 py-0.5 bg-white/20 text-white text-[12px] font-medium rounded">v1.{minorVersion}</span>
-                <p className="text-[12px] text-white/70 mt-1">Scenario Build</p>
+                <span className="px-2 py-0.5 bg-white/20 text-white text-[13px] font-medium rounded">v1.{minorVersion}</span>
+                <p className="text-[13px] text-white/70 mt-1">Scenario Build</p>
               </div>
             </div>
 
@@ -810,7 +810,7 @@ export default function WorkspacePage() {
                 hierarchy.components.map(comp => renderComponentNode(comp))
               ) : (
                 <div className="border-2 border-dashed border-[#c8d2e1] rounded-xl flex items-center justify-center h-full w-full">
-                  <span className="text-[14px] text-[#94a3b8]">시나리오 트리 분석을 실행하세요</span>
+                  <span className="text-[15px] text-[#94a3b8]">시나리오 트리 분석을 실행하세요</span>
                 </div>
               )}
             </div>
@@ -829,7 +829,7 @@ export default function WorkspacePage() {
                     key={tab}
                     onClick={() => !isDisabled && setActiveTab(tab as typeof activeTab)}
                     disabled={isDisabled}
-                    className={`px-4 py-1.5 mr-0.5 text-[14px] font-medium rounded-full transition-all flex items-center gap-1.5 ${
+                    className={`px-4 py-1.5 mr-0.5 text-[15px] font-medium rounded-full transition-all flex items-center gap-1.5 ${
                     activeTab === tab
                     ? "bg-[#0f172a] text-white shadow-sm"
                     : isDisabled
@@ -857,7 +857,7 @@ export default function WorkspacePage() {
           <div className="flex-1 flex items-center justify-center px-6 pt-5 pb-8 overflow-hidden">
             {activeTab === "PREVIEW" && (
               /* iPhone Frame */
-              <div className="h-full aspect-[9/19.5] max-h-full bg-[#1a1a1a] rounded-[40px] p-2 shadow-xl">
+              <div className="h-full aspect-[12/19.5] max-h-full bg-[#1a1a1a] rounded-[40px] p-2 shadow-xl">
                 <div className="w-full h-full bg-[#f5f5f5] rounded-[32px] relative overflow-hidden">
                   {/* Notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90px] h-[24px] bg-[#1a1a1a] rounded-b-2xl z-10" />
@@ -867,8 +867,8 @@ export default function WorkspacePage() {
                     {!hierarchy?.components?.length ? (
                       <div className="h-full flex items-center justify-center">
                         <div className="text-center">
-                          <p className="text-[13px] text-[#94a3b8]">프리뷰 준비 완료</p>
-                          <p className="text-[14px] text-[#cbd5f5] mt-2">시나리오 트리 분석을 실행하세요</p>
+                          <p className="text-[14px] text-[#94a3b8]">프리뷰 준비 완료</p>
+                          <p className="text-[15px] text-[#cbd5f5] mt-2">시나리오 트리 분석을 실행하세요</p>
                         </div>
                       </div>
                     ) : previewHtml ? (
@@ -907,7 +907,7 @@ export default function WorkspacePage() {
                     <path d="M9 1.5V16.5M3 5.875V10.875M15 5.875V9.625C15 10.0417 14.55 11 12.75 11.5" stroke="#8B5CF6" strokeWidth="1.5" strokeLinecap="round"/>
                     <circle cx="3" cy="13.5" r="2.5" stroke="#8B5CF6" strokeLinejoin="round"/>
                   </svg>
-                  <span className="text-[16px] font-semibold text-[#0f172a]">Business Flow</span>
+                  <span className="text-[17px] font-semibold text-[#0f172a]">Business Flow</span>
                 </div>
 
                 {flow ? (
@@ -915,7 +915,7 @@ export default function WorkspacePage() {
                     {flowChangedSteps.length > 0 && (
                       <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                        <span className="text-[11px] text-amber-700 font-medium">
+                        <span className="text-[12px] text-amber-700 font-medium">
                           {flowChangedSteps.length}개 단계 수정됨 (step {flowChangedSteps.join(", ")})
                         </span>
                       </div>
@@ -926,7 +926,7 @@ export default function WorkspacePage() {
                         return (
                           <div key={step.step} className="flex gap-4">
                             <div className="flex flex-col items-center">
-                              <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-[13px] font-semibold ${isChanged ? "bg-amber-500" : "bg-[#8b5cf6]"}`}>
+                              <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-[14px] font-semibold ${isChanged ? "bg-amber-500" : "bg-[#8b5cf6]"}`}>
                                 {step.step}
                               </div>
                               {step.step < flow.steps.length && (
@@ -935,20 +935,20 @@ export default function WorkspacePage() {
                             </div>
                             <div className="flex-1 pb-6">
                               <div className="flex items-center gap-2 mb-2">
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isChanged ? "text-amber-700 bg-amber-100" : "text-[#8b5cf6] bg-[#8b5cf6]/10"}`}>
+                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${isChanged ? "text-amber-700 bg-amber-100" : "text-[#8b5cf6] bg-[#8b5cf6]/10"}`}>
                                   {step.component}
                                 </span>
-                                <span className="text-[10px] text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
+                                <span className="text-[11px] text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
                                   {step.area}
                                 </span>
                                 {isChanged && (
-                                  <span className="ml-auto text-[10px] text-amber-600 font-semibold bg-amber-100 px-2 py-0.5 rounded-full">
+                                  <span className="ml-auto text-[11px] text-amber-600 font-semibold bg-amber-100 px-2 py-0.5 rounded-full">
                                     수정됨
                                   </span>
                                 )}
                               </div>
-                              <h3 className={`text-[18px] font-semibold mb-2 ${isChanged ? "text-amber-600" : "text-[#0f172a]"}`}>{step.action}</h3>
-                              <p className="text-[13px] text-[#64748b] leading-relaxed">{step.result}</p>
+                              <h3 className={`text-[19px] font-semibold mb-2 ${isChanged ? "text-amber-600" : "text-[#0f172a]"}`}>{step.action}</h3>
+                              <p className="text-[14px] text-[#64748b] leading-relaxed">{step.result}</p>
                             </div>
                           </div>
                         )
@@ -957,7 +957,7 @@ export default function WorkspacePage() {
                   </>
                 ) : (
                   <div className="h-full flex items-center justify-center">
-                    <p className="text-[13px] text-[#94a3b8]">
+                    <p className="text-[14px] text-[#94a3b8]">
                       레포지토리를 분석하면 플로우가 생성됩니다.
                     </p>
                   </div>
@@ -973,9 +973,9 @@ export default function WorkspacePage() {
                     <path d="M18.5 4.19744C18.5 2.83378 17.3807 1.72831 16 1.72831C14.6193 1.72831 13.5 2.83378 13.5 4.19744C13.5 5.56111 14.6193 6.66658 16 6.66658V8.14806C13.7909 8.14806 12 6.37931 12 4.19744C12 2.01558 13.7909 0.246826 16 0.246826C18.2091 0.246826 20 2.01558 20 4.19744C20 6.37931 18.2091 8.14806 16 8.14806V6.66658C17.3807 6.66658 18.5 5.56111 18.5 4.19744Z" fill="#8B5CF6"/>
                     <path d="M16.75 6.66667C16.75 9.89105 15.1989 12.2673 13.293 13.8397C11.4098 15.3933 9.13466 16.2029 7.54395 16.2953L7.45605 14.8158C8.69868 14.7436 10.6736 14.0717 12.332 12.7035C13.9677 11.3541 15.25 9.36821 15.25 6.66667H16.75ZM3.25 0.740741C3.25 0.331641 3.58579 0 4 0C4.41421 0 4.75 0.331641 4.75 0.740741V12.5926H3.25V0.740741Z" fill="#8B5CF6"/>
                   </svg>
-                  <span className="text-[16px] font-semibold text-[#0f172a]">시스템 아키텍쳐 다이어그램</span>
+                  <span className="text-[17px] font-semibold text-[#0f172a]">시스템 아키텍쳐 다이어그램</span>
                   {diagramChangedNodes.length > 0 && (
-                    <span className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
+                    <span className="flex items-center gap-1 text-[11px] text-amber-700 font-semibold bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                       {diagramChangedNodes.length}개 노드 수정됨
                     </span>
@@ -986,17 +986,17 @@ export default function WorkspacePage() {
                   <>
                     <MermaidDiagram chart={diagram} />
                     <details className="mt-4">
-                      <summary className="text-[11px] text-[#94a3b8] cursor-pointer hover:text-[#64748b] select-none">
+                      <summary className="text-[12px] text-[#94a3b8] cursor-pointer hover:text-[#64748b] select-none">
                         Mermaid 원본 보기
                       </summary>
-                      <pre className="mt-2 text-[11px] leading-relaxed font-mono text-[#475569] bg-white border border-[#e4eaf2] rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">
+                      <pre className="mt-2 text-[12px] leading-relaxed font-mono text-[#475569] bg-white border border-[#e4eaf2] rounded-lg p-4 overflow-x-auto whitespace-pre-wrap">
                         {diagram}
                       </pre>
                     </details>
                   </>
                 ) : (
                   <div className="h-full flex items-center justify-center">
-                    <p className="text-[13px] text-[#94a3b8]">
+                    <p className="text-[14px] text-[#94a3b8]">
                       레포지토리를 분석하면 다이어그램이 생성됩니다.
                     </p>
                   </div>
@@ -1010,7 +1010,7 @@ export default function WorkspacePage() {
                 <div className="flex items-center gap-2 mb-4">
                   <button
                     onClick={() => setCompareTab("files")}
-                    className={`px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all ${
+                    className={`px-4 py-1.5 text-[14px] font-medium rounded-lg transition-all ${
                       compareTab === "files"
                         ? "bg-[#8b5cf6] text-white"
                         : "bg-white border border-[#e4eaf2] text-[#64748b] hover:border-[#8b5cf6]"
@@ -1020,7 +1020,7 @@ export default function WorkspacePage() {
                   </button>
                   <button
                     onClick={() => setCompareTab("detail")}
-                    className={`px-4 py-1.5 text-[13px] font-medium rounded-lg transition-all ${
+                    className={`px-4 py-1.5 text-[14px] font-medium rounded-lg transition-all ${
                       compareTab === "detail"
                         ? "bg-[#8b5cf6] text-white"
                         : "bg-white border border-[#e4eaf2] text-[#64748b] hover:border-[#8b5cf6]"
@@ -1042,8 +1042,8 @@ export default function WorkspacePage() {
                           <FileCode2 className="w-5 h-5 text-[#8b5cf6]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-medium text-[#0f172a] truncate">{modifyResult.source_file}</p>
-                          <p className="text-[12px] text-[#94a3b8]">수정됨</p>
+                          <p className="text-[15px] font-medium text-[#0f172a] truncate">{modifyResult.source_file}</p>
+                          <p className="text-[13px] text-[#94a3b8]">수정됨</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <ChevronRight className="w-4 h-4 text-[#94a3b8]" />
@@ -1058,19 +1058,19 @@ export default function WorkspacePage() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fef2f2] border border-[#fecaca]">
                         <span className="w-2 h-2 rounded-full bg-[#ef4444]" />
-                        <span className="text-[11px] font-medium text-[#ef4444]">Before</span>
+                        <span className="text-[12px] font-medium text-[#ef4444]">Before</span>
                       </div>
                       <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f0fdf4] border border-[#bbf7d0]">
                         <span className="w-2 h-2 rounded-full bg-[#22c55e]" />
-                        <span className="text-[11px] font-medium text-[#22c55e]">After</span>
+                        <span className="text-[12px] font-medium text-[#22c55e]">After</span>
                       </div>
-                      <span className="text-[11px] text-[#94a3b8] ml-auto font-mono">
+                      <span className="text-[12px] text-[#94a3b8] ml-auto font-mono">
                         {modifyResult.source_file}
                       </span>
                     </div>
               
                     {/* Diff Viewer */}
-                    <div className="rounded-xl overflow-hidden border border-[#e4eaf2] text-[12px]">
+                    <div className="rounded-xl overflow-hidden border border-[#e4eaf2] text-[13px]">
                       <ReactDiffViewer
                         oldValue={modifyResult.original_code}
                         newValue={modifyResult.modified_code}
