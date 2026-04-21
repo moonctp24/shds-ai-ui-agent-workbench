@@ -752,7 +752,7 @@ export default function WorkspacePage() {
                       <rect x="11.4167" y="11.395" width="3.83333" height="3.85498" stroke="#fff" strokeWidth="1.5"/>
                       <path d="M13.3333 10.645V8.41373H8.2222M3.11108 10.645V8.41373H8.2222M8.2222 8.41373V4.84375" stroke="#fff"/>
                     </svg>
-                    <span className="text-[17px] font-medium">{modifyLoading ? "기획 수정 중..." : "분석설계 수정"}</span>
+                    <span className="text-[17px] font-medium">{modifyLoading ? "분석설계 수정 중..." : "분석설계 수정"}</span>
                   </button>
                   {modifyError && (
                     <p className="text-[12px] text-red-500 mt-1.5">{modifyError}</p>
