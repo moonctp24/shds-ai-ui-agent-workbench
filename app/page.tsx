@@ -833,13 +833,14 @@ export default function WorkspacePage() {
                       ))}
 
                       <button
+                        disabled={addedItems.some(i => !i.text.trim())}
                         onClick={() =>
                           setAddedItems(prev => [
                             ...prev,
                             { id: `added-${Date.now()}`, text: "" },
                           ])
                         }
-                        className="w-full h-10 border-2 border-dashed border-[#c8d2e1] rounded-lg flex items-center justify-center gap-1 text-[#94a3b8] hover:border-[#8b5cf6] hover:text-[#8b5cf6] transition-colors"
+                        className="w-full h-10 border-2 border-dashed rounded-lg flex items-center justify-center gap-1 transition-colors disabled:cursor-not-allowed disabled:border-[#e2e8f0] disabled:text-[#cbd5e1] border-[#c8d2e1] text-[#94a3b8] hover:border-[#8b5cf6] hover:text-[#8b5cf6]"
                       >
                         <span className="text-lg">+</span>
                         <span className="text-[16px] font-medium">새로운 내용 추가</span>
