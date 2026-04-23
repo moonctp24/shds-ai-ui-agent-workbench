@@ -317,8 +317,19 @@ export default function WorkspacePage() {
 
     const addedTexts = addedItems.map(item => item.text.trim()).filter(Boolean)
 
-    if (checkedKeys.length === 0 && addedTexts.length === 0) {
+    if (checkedKeys.length === 0 && addedItems.length === 0) {
       setModifyError("수정할 항목을 선택하거나 추가해주세요.")
+      isModifyingRef.current = false
+      return
+    }
+
+    // 항목은 선택됐지만 실제 텍스트 내용이 없는 경우 (삭제, 추가 텍스트, 추가 입력 모두 없음)
+    const hasContent =
+      strikethroughAreaIds.length > 0 ||
+      addedTexts.length > 0 ||
+      modifyAreaIds.some(k => (editedDescriptions[k] ?? "").trim().length > 0)
+    if (!hasContent) {
+      alert("수정할 내용이 없습니다.")
       isModifyingRef.current = false
       return
     }
