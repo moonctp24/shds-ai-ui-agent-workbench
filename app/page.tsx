@@ -791,13 +791,13 @@ export default function WorkspacePage() {
                         )
                       })}
 
-                      {/* 직접 추가한 텍스트박스 목록 */}
+                      {/* 직접 추가한 텍스트박스 목록 (노랑 계열로 기존 보라 항목과 구분) */}
                       {addedItems.map(item => (
                         <div
                           key={item.id}
-                          className="flex items-start gap-2 rounded-lg px-3 py-2 bg-[#f8fafc] border border-[#8b5cf6]"
+                          className="flex items-start gap-2 rounded-lg px-3 py-2 bg-amber-50 border border-amber-300"
                         >
-                          <div className="w-5 h-5 rounded flex items-center justify-center cursor-pointer mt-0.5 flex-shrink-0 bg-[#8b5cf6]">
+                          <div className="w-5 h-5 rounded flex items-center justify-center cursor-pointer mt-0.5 flex-shrink-0 bg-amber-400">
                             <Check className="w-3 h-3 text-white stroke-[2]" />
                           </div>
                           <textarea
@@ -809,9 +809,7 @@ export default function WorkspacePage() {
                             }
                             placeholder="추가할 내용을 입력하세요..."
                             rows={Math.max(2, Math.ceil((item.text.length || 20) / 28))}
-                            className={`flex-1 text-[16px] text-[#0f172a] resize-none 
-                            ${item.text.length > 1 ? 'bg-white border-2 border-solid ' : 'focus:outline-none bg-transparent border-none '} 
-                            min-h-[60px] leading-relaxed placeholder:text-[#94a3b8] bg-white border-2 border-solid`}
+                            className="flex-1 text-[16px] text-[#0f172a] resize-none bg-white border border-amber-200 rounded min-h-[60px] leading-relaxed placeholder:text-[#94a3b8] px-2 py-1 focus:outline-none focus:border-amber-400"
                           />
                           <button
                             onClick={() => setAddedItems(prev => prev.filter(i => i.id !== item.id))}
