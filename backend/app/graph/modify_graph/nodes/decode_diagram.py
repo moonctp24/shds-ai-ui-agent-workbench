@@ -1,5 +1,11 @@
 """
 decode_diagram 노드: 자연어 수정 요청을 반영해 기존 Mermaid 다이어그램을 업데이트한다.
+
+타겟 노드 탐색 우선순위:
+  ① checked_area_ids 역조회 (diagram_node_map 사용) — 가장 정밀
+  ② area_id(컴포넌트 ID) 역조회 — 컴포넌트 단위
+  ③ 힌트 없이 LLM이 자체 판단
+
 original_diagram이 없으면 노드를 스킵한다.
 변경된 노드는 Mermaid classDef 구문으로 하이라이트를 주입한다.
 """
@@ -12,9 +18,37 @@ from backend.app.llm.openai_client import generate_text
 from backend.app.llm.prompts import DECODE_DIAGRAM_SYSTEM_PROMPT
 
 
-def _build_user_prompt(original_diagram: str, modification_request: str) -> str:
+def _find_target_node_ids(
+    target_hier_ids: List[str],
+    diagram_node_map: Dict[str, str],
+) -> List[str]:
+    """
+    diagram_node_map에서 값(hierarchy ID)이 target_hier_ids 중 하나와 일치하는
+    키(Mermaid 노드 ID) 목록을 반환한다.
+    """
+    if not target_hier_ids or not diagram_node_map:
+        return []
+    result = []
+    for node_id, hier_id in diagram_node_map.items():
+        if hier_id in target_hier_ids:
+            result.append(node_id)
+    return result
+
+
+def _build_user_prompt(
+    original_diagram: str,
+    modification_request: str,
+    target_node_ids: List[str] | None = None,
+) -> str:
+    hint = ""
+    if target_node_ids:
+        hint = (
+            f"\n\n[수정 대상 노드 힌트]\n"
+            f"다음 노드 ID가 이번 수정과 직접 관련됩니다: {', '.join(target_node_ids)}\n"
+            "이 노드들을 중심으로 구조 변경을 적용하세요."
+        )
     return (
-        f"자연어 수정 요청: {modification_request}\n\n"
+        f"자연어 수정 요청: {modification_request}{hint}\n\n"
         "원본 Mermaid 다이어그램:\n"
         + original_diagram
     )
@@ -30,12 +64,13 @@ def _clean_diagram(raw: str) -> str:
 def _parse_nodes(diagram: str) -> Dict[str, str]:
     """Mermaid 다이어그램에서 node_id -> label 매핑을 추출한다."""
     nodes: Dict[str, str] = {}
-    # comp1["헤더"], area1("로고"), node{조건} 등 다양한 Mermaid 노드 표기 지원
     pattern = re.compile(r'(\w+)\s*[\[({<]+["\']?([^"\'\]\)}>]+)["\']?[\])}>]')
     for match in pattern.finditer(diagram):
         node_id, label = match.group(1).strip(), match.group(2).strip()
-        # flowchart, classDef, class 등 키워드 제외
-        if node_id.lower() not in {"flowchart", "graph", "classdef", "class", "subgraph", "end", "style", "linkstyle"}:
+        if node_id.lower() not in {
+            "flowchart", "graph", "classdef", "class",
+            "subgraph", "end", "style", "linkstyle",
+        }:
             nodes[node_id] = label
     return nodes
 
@@ -55,7 +90,6 @@ def _inject_highlights(diagram: str, changed_nodes: List[str]) -> str:
     """변경된 노드에 Mermaid classDef 하이라이트 구문을 주입한다."""
     if not changed_nodes:
         return diagram
-    # 이미 주입된 classDef modified가 있으면 제거 후 재주입
     diagram = re.sub(r"\nclassDef modified[^\n]*", "", diagram)
     diagram = re.sub(r"\nclass [^\n]+ modified", "", diagram)
     highlight_style = (
@@ -68,11 +102,42 @@ def _inject_highlights(diagram: str, changed_nodes: List[str]) -> str:
 def decode_diagram_node(state: Dict[str, Any]) -> Dict[str, Any]:
     original_diagram: str | None = state.get("original_diagram")
     modification_request: str = state.get("modification_request", "")
+    area_id: str = state.get("area_id", "")
+    checked_area_ids: List[str] = state.get("checked_area_ids") or []
+    diagram_node_map: Dict[str, str] = state.get("diagram_node_map") or {}
 
     if not original_diagram or not modification_request:
         return {}
 
-    user_prompt = _build_user_prompt(original_diagram, modification_request)
+    # ── ① checked_area_ids 역조회 (가장 정밀) ────────────────────────────────
+    target_node_ids: List[str] = []
+    if checked_area_ids and diagram_node_map:
+        target_node_ids = _find_target_node_ids(checked_area_ids, diagram_node_map)
+        if target_node_ids:
+            print(
+                f"[decode_diagram_node] checked_area_ids 매핑 성공 "
+                f"— ids={checked_area_ids}, nodes={target_node_ids}",
+                flush=True,
+            )
+
+    # ── ② area_id(컴포넌트 ID) 역조회 폴백 ─────────────────────────────────
+    if not target_node_ids and area_id and diagram_node_map:
+        target_node_ids = _find_target_node_ids([area_id], diagram_node_map)
+        if target_node_ids:
+            print(
+                f"[decode_diagram_node] area_id 매핑 성공 "
+                f"— area_id={area_id!r}, nodes={target_node_ids}",
+                flush=True,
+            )
+
+    # ── ③ 힌트 없이 LLM 자체 판단 ───────────────────────────────────────────
+    if not target_node_ids:
+        print(
+            f"[decode_diagram_node] node_map 매핑 없음, LLM이 구조 변경 판단",
+            flush=True,
+        )
+
+    user_prompt = _build_user_prompt(original_diagram, modification_request, target_node_ids)
 
     try:
         raw = generate_text(DECODE_DIAGRAM_SYSTEM_PROMPT, user_prompt)

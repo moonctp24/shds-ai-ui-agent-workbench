@@ -128,6 +128,7 @@ type Hierarchy = {
   components: Component[]
   flow?: Flow
   diagram?: string
+  diagram_node_map?: Record<string, string>
   preview_html?: string
 }
 
@@ -211,6 +212,7 @@ export default function WorkspacePage() {
 
   const [flow, setFlow] = useState<Flow | null>(INITIAL_DATA.flow ?? null)
   const [diagram, setDiagram] = useState<string | null>(INITIAL_DATA.diagram ?? null)
+  const [diagramNodeMap, setDiagramNodeMap] = useState<Record<string, string>>(INITIAL_DATA.diagram_node_map ?? {})
   const [previewHtml, setPreviewHtml] = useState<string | null>(INITIAL_DATA.preview_html ?? null)
   const [flowChangedSteps, setFlowChangedSteps] = useState<number[]>([])
   const [diagramChangedNodes, setDiagramChangedNodes] = useState<string[]>([])
@@ -268,11 +270,13 @@ export default function WorkspacePage() {
         : collectAreaCodes(data as Component)
       const res = await api.post("/api/modify-code", {
         area_id: data.id,
+        checked_area_ids: checkedKeys.length > 0 ? checkedKeys : undefined,
         source_file: data.source_file,
         original_code: origCode,
         modification_request: modificationRequest,
         original_flow: flow ?? undefined,
         original_diagram: diagram ?? undefined,
+        diagram_node_map: Object.keys(diagramNodeMap).length > 0 ? diagramNodeMap : undefined,
       })
       setModifyResult(res.data)
       setMinorVersion(prev => prev + 1)   // v1.0 → v1.1 → v1.2 …
