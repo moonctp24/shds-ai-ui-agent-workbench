@@ -120,6 +120,23 @@ type FlowStep = {
   result: string
 }
 
+/**
+ * area-2-2-0-3 → ["area-2-2-0-3", "comp-2-2-0"]  (직접 ID + 직속 부모 컴포넌트 1단계만)
+ * comp-2-2-0   → ["comp-2-2-0",   "comp-2-2"]
+ * 조상 체인 전체를 올라가면 상위 노드까지 과도하게 매칭되므로 부모 1단계만 반환한다.
+ */
+function getHierarchyChain(id: string): string[] {
+  const chain: string[] = [id]
+  const prefix = id.startsWith("area-") ? "area-" : id.startsWith("comp-") ? "comp-" : null
+  if (!prefix) return chain
+  const parts = id.slice(prefix.length).split("-")
+  // 직속 부모 컴포넌트 1단계만 추가 (comp-2-2-0-3 → comp-2-2-0)
+  if (parts.length >= 2) {
+    chain.push("comp-" + parts.slice(0, -1).join("-"))
+  }
+  return chain
+}
+
 type Flow = {
   title: string
   steps: FlowStep[]
@@ -226,20 +243,25 @@ export default function WorkspacePage() {
   const [diagramChangedNodes, setDiagramChangedNodes] = useState<string[]>([])
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  // diagram + 삭제예정 노드 하이라이트를 합산한 표시용 Mermaid 문자열
+  // diagram 수정 위치 하이라이트 표시용 Mermaid 문자열
+  // LLM의 diagram_changed_nodes는 의미 매칭 오류로 시각 하이라이트에서 제외
+  // 프론트 ID 매핑(diagramDeletedNodes)만 사용
   const displayDiagram = useMemo(() => {
     if (!diagram) return null
     if (diagramDeletedNodes.length === 0) return diagram
     let d = diagram
       .replace(/\nclassDef deleted[^\n]*/g, "")
       .replace(/\nclass [^\n]+ deleted/g, "")
+      .replace(/\nclassDef modified[^\n]*/g, "")
+      .replace(/\nclass [^\n]+ modified/g, "")
       .trimEnd()
-    const deleteStyle = "classDef deleted fill:#fee2e2,stroke:#ef4444,stroke-width:2px,color:#991b1b"
-    const deleteAssign = "class " + diagramDeletedNodes.join(",") + " deleted"
-    return d + "\n" + deleteStyle + "\n" + deleteAssign
+    // 수정 위치 (삭제 예정 포함) — 앰버 단일 스타일로 통일
+    d += "\nclassDef modified fill:#fffbeb,stroke:#f59e0b,stroke-width:2px,color:#78350f"
+    d += "\nclass " + diagramDeletedNodes.join(",") + " modified"
+    return d
   }, [diagram, diagramDeletedNodes])
 
-  // 영역/컴포넌트 선택 변경 시 수정 결과·체크박스·편집내역·추가항목 초기화 (탭은 유지)
+  // 영역/컴포넌트 선택 변경 시 수정 결과·체크박스·편집내역·추가항목·하이라이트·버전 초기화
   useEffect(() => {
     setModifyResult(null)
     setModifyError(null)
@@ -248,7 +270,10 @@ export default function WorkspacePage() {
     setAddedItems([])
     setStrikethroughItems({})
     setFlowDeletedSteps([])
+    setFlowChangedSteps([])
     setDiagramDeletedNodes([])
+    setDiagramChangedNodes([])
+    setMinorVersion(0)
   }, [selection])
 
   // 트리에서 항목 선택 시 preview iframe 하이라이트 동기화
@@ -273,16 +298,38 @@ export default function WorkspacePage() {
     const strikethroughAreaIds = checkedKeys.filter(k => strikethroughItems[k])
     const modifyAreaIds = checkedKeys.filter(k => !strikethroughItems[k])
 
-    // 수정 텍스트 + 삭제 텍스트([삭제] 접두어)를 모두 포함해 LLM에 전달
-    const modifyTexts = modifyAreaIds.map(k => editedDescriptions[k] ?? "").filter(Boolean)
+    // areas 배열에서 ID로 항목 이름 조회하는 헬퍼
+    const getAreaName = (areaId: string): string =>
+      (selection.data as any).areas?.find((a: any) => a.id === areaId)?.name ?? ""
+
+    // 수정 텍스트: 항목 이름 + 추가 입력(있으면)
+    const modifyTexts = modifyAreaIds.map(k => {
+      const name = getAreaName(k)
+      const extra = (editedDescriptions[k] ?? "").trim()
+      return extra ? `${name}\n→ ${extra}` : name
+    }).filter(Boolean)
+
+    // 삭제 텍스트: [삭제] + 항목 이름
     const deleteTexts = strikethroughAreaIds
-      .map(k => editedDescriptions[k] ?? "")
+      .map(k => getAreaName(k))
       .filter(Boolean)
-      .map(t => `[삭제] ${t}`)
+      .map(n => `[삭제] ${n}`)
+
     const addedTexts = addedItems.map(item => item.text.trim()).filter(Boolean)
 
-    if (modifyTexts.length === 0 && deleteTexts.length === 0 && addedTexts.length === 0) {
+    if (checkedKeys.length === 0 && addedItems.length === 0) {
       setModifyError("수정할 항목을 선택하거나 추가해주세요.")
+      isModifyingRef.current = false
+      return
+    }
+
+    // 항목은 선택됐지만 실제 텍스트 내용이 없는 경우 (삭제, 추가 텍스트, 추가 입력 모두 없음)
+    const hasContent =
+      strikethroughAreaIds.length > 0 ||
+      addedTexts.length > 0 ||
+      modifyAreaIds.some(k => (editedDescriptions[k] ?? "").trim().length > 0)
+    if (!hasContent) {
+      alert("수정할 내용이 없습니다.")
       isModifyingRef.current = false
       return
     }
@@ -291,27 +338,38 @@ export default function WorkspacePage() {
     setModifyError(null)
     setModifyResult(null)
 
-    // ── 삭제 예정 하이라이트 계산 (ID 매핑 기반, 프론트에서 결정론적으로) ─────
+    // ── 하이라이트 계산 (계층 체인 매핑 기반, ID 매핑만 사용) ────────────────
+    // FLOW: 삭제 예정 항목만 프론트 계산 (수정 항목은 백엔드 flow_changed_steps 사용)
     const newDeletedSteps: number[] = []
-    const newDeletedNodes: string[] = []
     if (strikethroughAreaIds.length > 0 && flow) {
       for (const step of flow.steps) {
         const sAreaId = (step as any).area_id ?? ""
         const sCompId = (step as any).component_id ?? ""
-        if (strikethroughAreaIds.includes(sAreaId) || strikethroughAreaIds.includes(sCompId)) {
-          newDeletedSteps.push(step.step)
-        }
-      }
-    }
-    if (strikethroughAreaIds.length > 0 && Object.keys(diagramNodeMap).length > 0) {
-      for (const [nodeId, hierId] of Object.entries(diagramNodeMap)) {
-        if (strikethroughAreaIds.includes(hierId)) {
-          newDeletedNodes.push(nodeId)
+        for (const selId of strikethroughAreaIds) {
+          const chain = getHierarchyChain(selId)
+          if (chain.includes(sAreaId) || chain.includes(sCompId)) {
+            newDeletedSteps.push(step.step)
+            break
+          }
         }
       }
     }
     setFlowDeletedSteps(newDeletedSteps)
-    setDiagramDeletedNodes(newDeletedNodes)
+
+    // DIAGRAM: 수정+삭제 모든 체크 항목에서 프론트 ID 매핑으로만 계산
+    // LLM의 diagram_changed_nodes는 의미 매칭 오류가 있으므로 사용하지 않음
+    const newHighlightNodes: string[] = []
+    if (checkedKeys.length > 0 && Object.keys(diagramNodeMap).length > 0) {
+      for (const [nodeId, hierId] of Object.entries(diagramNodeMap)) {
+        for (const selId of checkedKeys) {
+          if (getHierarchyChain(selId).includes(hierId)) {
+            newHighlightNodes.push(nodeId)
+            break
+          }
+        }
+      }
+    }
+    setDiagramDeletedNodes(newHighlightNodes)
 
     // 삭제 포함 전체 modification_request → LLM 전달
     const modificationRequest = [...modifyTexts, ...deleteTexts, ...addedTexts].join("\n")
@@ -335,19 +393,10 @@ export default function WorkspacePage() {
       })
       setModifyResult(res.data)
       setMinorVersion(prev => prev + 1)
-      if (res.data.modified_flow) {
-        setFlow(res.data.modified_flow)
-        setFlowChangedSteps(res.data.flow_changed_steps ?? [])
-      } else {
-        setFlowChangedSteps([])
-      }
-      if (res.data.modified_diagram) {
-        setDiagram(res.data.modified_diagram)
-        setDiagramChangedNodes(res.data.diagram_changed_nodes ?? [])
-      } else {
-        setDiagramChangedNodes([])
-      }
-      setActiveTab("DIAGRAM")
+      // flow/diagram 내용은 기존 그대로 유지 — 수정이 필요한 위치만 하이라이트
+      setFlowChangedSteps(res.data.flow_changed_steps ?? [])
+      setDiagramChangedNodes(res.data.diagram_changed_nodes ?? [])
+      setActiveTab("FLOW")
     } catch (e: any) {
       const msg =
         e?.response?.data?.detail || e?.message || "수정에 실패했습니다."
@@ -667,13 +716,14 @@ export default function WorkspacePage() {
                         const key = area.id
                         const checked = checkedDescriptions[key] ?? false
                         const isStrikethrough = checked && (strikethroughItems[key] ?? false)
-                        const editedText = editedDescriptions[key] ?? area.name
+                        // editedDescriptions[key]는 이제 "추가 입력 텍스트"만 저장 (원본 area.name은 readonly 표시)
+                        const additionalText = editedDescriptions[key] ?? ""
 
                         const toggleCheck = () => {
                           const next = !checked
                           setCheckedDescriptions(prev => ({ ...prev, [key]: next }))
                           if (next) {
-                            setEditedDescriptions(prev => ({ ...prev, [key]: area.name }))
+                            setEditedDescriptions(prev => ({ ...prev, [key]: "" }))
                           } else {
                             setEditedDescriptions(prev => {
                               const n = { ...prev }
@@ -710,21 +760,25 @@ export default function WorkspacePage() {
                             {checked ? (
                               isStrikethrough ? (
                                 <span className="flex-1 text-[16px] text-red-400 line-through leading-relaxed whitespace-pre-line opacity-70">
-                                  {editedText}
+                                  {area.name}
                                 </span>
                               ) : (
-                                <textarea
-                                  value={editedText}
-                                  onChange={(e) =>
-                                    setEditedDescriptions(prev => ({ ...prev, [key]: e.target.value }))
-                                  }
-                                  rows={Math.max(2, Math.ceil(editedText.length / 28))}
-                                  className={`
-                                  flex-1 text-[16px] text-[#0f172a] resize-none 
-                                  ${editedText.length > 1 ? 'bg-white border-2 border-solid ' : 'focus:outline-none bg-transparent border-none '} 
-                                  min-h-[60px] leading-relaxed
-                                `}
-                                />
+                                <div className="flex-1 flex flex-col gap-2">
+                                  {/* 원본 텍스트: readonly */}
+                                  <span className="text-[16px] text-[#0f172a] leading-relaxed whitespace-pre-line select-none">
+                                    {area.name}
+                                  </span>
+                                  {/* 추가 수정 요청 입력 */}
+                                  <textarea
+                                    value={additionalText}
+                                    onChange={(e) =>
+                                      setEditedDescriptions(prev => ({ ...prev, [key]: e.target.value }))
+                                    }
+                                    placeholder="수정 요청 내용을 입력하세요..."
+                                    rows={2}
+                                    className="text-[15px] text-[#0f172a] resize-none bg-white border border-[#c8d2e1] rounded-md px-3 py-2 leading-relaxed placeholder:text-[#94a3b8] focus:outline-none focus:border-[#8b5cf6] focus:ring-1 focus:ring-[#8b5cf6]"
+                                  />
+                                </div>
                               )
                             ) : (
                               <span className="flex-1 text-[16px] text-[#0f172a] leading-relaxed whitespace-pre-line">{area.name}</span>
@@ -748,13 +802,13 @@ export default function WorkspacePage() {
                         )
                       })}
 
-                      {/* 직접 추가한 텍스트박스 목록 */}
+                      {/* 직접 추가한 텍스트박스 목록 (노랑 계열로 기존 보라 항목과 구분) */}
                       {addedItems.map(item => (
                         <div
                           key={item.id}
-                          className="flex items-start gap-2 rounded-lg px-3 py-2 bg-[#f8fafc] border border-[#8b5cf6]"
+                          className="flex items-start gap-2 rounded-lg px-3 py-2 bg-amber-50 border border-amber-300"
                         >
-                          <div className="w-5 h-5 rounded flex items-center justify-center cursor-pointer mt-0.5 flex-shrink-0 bg-[#8b5cf6]">
+                          <div className="w-5 h-5 rounded flex items-center justify-center cursor-pointer mt-0.5 flex-shrink-0 bg-amber-400">
                             <Check className="w-3 h-3 text-white stroke-[2]" />
                           </div>
                           <textarea
@@ -764,11 +818,9 @@ export default function WorkspacePage() {
                                 prev.map(i => i.id === item.id ? { ...i, text: e.target.value } : i)
                               )
                             }
-                            placeholder="추가 수정 내용을 입력하세요..."
+                            placeholder="추가할 내용을 입력하세요..."
                             rows={Math.max(2, Math.ceil((item.text.length || 20) / 28))}
-                            className={`flex-1 text-[16px] text-[#0f172a] resize-none 
-                            ${item.text.length > 1 ? 'bg-white border-2 border-solid ' : 'focus:outline-none bg-transparent border-none '} 
-                            min-h-[60px] leading-relaxed placeholder:text-[#94a3b8] bg-white border-2 border-solid`}
+                            className="flex-1 text-[16px] text-[#0f172a] resize-none bg-white border border-amber-200 rounded min-h-[60px] leading-relaxed placeholder:text-[#94a3b8] px-2 py-1 focus:outline-none focus:border-amber-400"
                           />
                           <button
                             onClick={() => setAddedItems(prev => prev.filter(i => i.id !== item.id))}
@@ -781,13 +833,14 @@ export default function WorkspacePage() {
                       ))}
 
                       <button
+                        disabled={addedItems.some(i => !i.text.trim())}
                         onClick={() =>
                           setAddedItems(prev => [
                             ...prev,
                             { id: `added-${Date.now()}`, text: "" },
                           ])
                         }
-                        className="w-full h-10 border-2 border-dashed border-[#c8d2e1] rounded-lg flex items-center justify-center gap-1 text-[#94a3b8] hover:border-[#8b5cf6] hover:text-[#8b5cf6] transition-colors"
+                        className="w-full h-10 border-2 border-dashed rounded-lg flex items-center justify-center gap-1 transition-colors disabled:cursor-not-allowed disabled:border-[#e2e8f0] disabled:text-[#cbd5e1] border-[#c8d2e1] text-[#94a3b8] hover:border-[#8b5cf6] hover:text-[#8b5cf6]"
                       >
                         <span className="text-lg">+</span>
                         <span className="text-[16px] font-medium">새로운 내용 추가</span>
@@ -834,7 +887,7 @@ export default function WorkspacePage() {
                         <rect x="11.4167" y="11.395" width="3.83333" height="3.85498" stroke="#fff" strokeWidth="1.5" />
                         <path d="M13.3333 10.645V8.41373H8.2222M3.11108 10.645V8.41373H8.2222M8.2222 8.41373V4.84375" stroke="#fff" />
                       </svg>
-                      <span className="text-[22px] font-medium">{modifyLoading ? "분석설계 수정 중..." : "분석설계 수정"}</span>
+                      <span className="text-[22px] font-medium">{modifyLoading ? "분석설계 중..." : "분석설계"}</span>
                     </button>
                     {modifyError && (
                       <p className="text-[16px] text-red-500 mt-1.5">{modifyError}</p>
@@ -984,30 +1037,22 @@ export default function WorkspacePage() {
 
                   {flow ? (
                     <>
-                      {flowChangedSteps.length > 0 && (
+                      {(flowChangedSteps.length > 0 || flowDeletedSteps.length > 0) && (
                         <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
                           <span className="text-[16px] text-amber-700 font-medium">
-                            {flowChangedSteps.length}개 단계 수정됨 (step {flowChangedSteps.join(", ")})
-                          </span>
-                        </div>
-                      )}
-                      {flowDeletedSteps.length > 0 && (
-                        <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-                          <span className="text-[16px] text-red-700 font-medium">
-                            {flowDeletedSteps.length}개 단계 삭제 예정 (step {flowDeletedSteps.join(", ")})
+                            {[...new Set([...flowChangedSteps, ...flowDeletedSteps])].sort((a, b) => a - b).length}개 단계 수정 위치
+                            {" "}(step {[...new Set([...flowChangedSteps, ...flowDeletedSteps])].sort((a, b) => a - b).join(", ")})
                           </span>
                         </div>
                       )}
                       <div className="space-y-6">
                         {flow.steps.map((step) => {
-                          const isChanged = flowChangedSteps.includes(step.step)
-                          const isDeleted = flowDeletedSteps.includes(step.step)
+                          const isHighlighted = flowChangedSteps.includes(step.step) || flowDeletedSteps.includes(step.step)
                           return (
-                            <div key={step.step} className={`flex gap-4 ${isDeleted ? "bg-red-50 rounded-xl px-3 pt-3 border border-red-200" : ""}`}>
+                            <div key={step.step} className="flex gap-4">
                               <div className="flex flex-col items-center">
-                                <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-[16px] font-semibold ${isDeleted ? "bg-red-400" : isChanged ? "bg-amber-500" : "bg-[#8b5cf6]"}`}>
+                                <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-[16px] font-semibold ${isHighlighted ? "bg-amber-500" : "bg-[#8b5cf6]"}`}>
                                   {step.step}
                                 </div>
                                 {step.step < flow.steps.length && (
@@ -1016,25 +1061,20 @@ export default function WorkspacePage() {
                               </div>
                               <div className="flex-1 pb-6">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <span className={`text-[14px] font-semibold px-2 py-0.5 rounded-full ${isDeleted ? "text-red-700 bg-red-100" : isChanged ? "text-amber-700 bg-amber-100" : "text-[#8b5cf6] bg-[#8b5cf6]/10"}`}>
+                                  <span className={`text-[14px] font-semibold px-2 py-0.5 rounded-full ${isHighlighted ? "text-amber-700 bg-amber-100" : "text-[#8b5cf6] bg-[#8b5cf6]/10"}`}>
                                     {step.component}
                                   </span>
-                                  <span className={`text-[14px] px-2 py-0.5 rounded-full ${isDeleted ? "text-red-600 bg-red-50" : "text-[#64748b] bg-[#f1f5f9]"}`}>
+                                  <span className="text-[14px] text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full">
                                     {step.area}
                                   </span>
-                                  {isDeleted && (
-                                    <span className="ml-auto text-[14px] text-red-600 font-semibold bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">
-                                      ⚠ 삭제 예정 항목 포함
-                                    </span>
-                                  )}
-                                  {isChanged && !isDeleted && (
+                                  {isHighlighted && (
                                     <span className="ml-auto text-[14px] text-amber-600 font-semibold bg-amber-100 px-2 py-0.5 rounded-full">
-                                      수정됨
+                                      수정 위치
                                     </span>
                                   )}
                                 </div>
-                                <h3 className={`text-[22px] font-semibold mb-2 ${isDeleted ? "text-red-600" : isChanged ? "text-amber-600" : "text-[#0f172a]"}`}>{step.action}</h3>
-                                <p className={`text-[16px] leading-relaxed ${isDeleted ? "text-red-500" : "text-[#64748b]"}`}>{step.result}</p>
+                                <h3 className={`text-[22px] font-semibold mb-2 ${isHighlighted ? "text-amber-600" : "text-[#0f172a]"}`}>{step.action}</h3>
+                                <p className="text-[16px] text-[#64748b] leading-relaxed">{step.result}</p>
                               </div>
                             </div>
                           )
@@ -1060,16 +1100,10 @@ export default function WorkspacePage() {
                       <path d="M16.75 6.66667C16.75 9.89105 15.1989 12.2673 13.293 13.8397C11.4098 15.3933 9.13466 16.2029 7.54395 16.2953L7.45605 14.8158C8.69868 14.7436 10.6736 14.0717 12.332 12.7035C13.9677 11.3541 15.25 9.36821 15.25 6.66667H16.75ZM3.25 0.740741C3.25 0.331641 3.58579 0 4 0C4.41421 0 4.75 0.331641 4.75 0.740741V12.5926H3.25V0.740741Z" fill="#8B5CF6" />
                     </svg>
                     <span className="text-[22px] font-semibold text-[#0f172a]">시스템 아키텍쳐 다이어그램</span>
-                    {diagramChangedNodes.length > 0 && (
+                    {diagramDeletedNodes.length > 0 && (
                       <span className="flex items-center gap-1 text-[14px] text-amber-700 font-semibold bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                        {diagramChangedNodes.length}개 노드 수정됨
-                      </span>
-                    )}
-                    {diagramDeletedNodes.length > 0 && (
-                      <span className="flex items-center gap-1 text-[14px] text-red-700 font-semibold bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                        {diagramDeletedNodes.length}개 노드 삭제 예정
+                        {diagramDeletedNodes.length}개 노드 수정 위치
                       </span>
                     )}
                   </div>

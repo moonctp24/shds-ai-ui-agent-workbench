@@ -22,7 +22,7 @@
           },
           {
             "id": "area-1-2",
-            "name": "내비게이션 메뉴",
+            "name": "대시보드 이동",
             "source_file": "src/components/Header.tsx",
             "component_name": "Header",
             "code": "        <nav className=\"flex items-center gap-4 text-sm text-slate-600\">\n          <Link\n            href=\"/\"\n            className=\"rounded-full px-3 py-1 hover:bg-slate-100 hover:text-slate-900\"\n          >\n            대시보드\n          </Link>\n        </nav>",
@@ -70,6 +70,28 @@
                 "name": "이용현황배너",
                 "source_file": "src/app/page.tsx",
                 "areas": [
+                  {
+                    "id": "area-2-1-0-3",
+                    "name": "대시보드 타이틀",
+                    "source_file": "src/app/page.tsx",
+                    "component_name": "DashboardPage",
+                    "code": "<h1 className=\"text-base font-semibold\">내 카드 관리 대시보드</h1>",
+                    "description": [
+                      "이용현황배너 좌측 상단에 표시되는 페이지 타이틀입니다.",
+                      "흰색 폰트(text-white)로 '내 카드 관리 대시보드' 텍스트를 굵게(font-semibold) 출력합니다."
+                    ]
+                  },
+                  {
+                    "id": "area-2-1-0-4",
+                    "name": "대시보드 서브타이틀",
+                    "source_file": "src/app/page.tsx",
+                    "component_name": "DashboardPage",
+                    "code": "<p className=\"mt-1 text-xs text-blue-100\">보유 카드 현황과 결제 예정 금액을 한눈에 확인하세요.</p>",
+                    "description": [
+                      "타이틀 바로 아래에 위치하는 안내 서브타이틀 문구입니다.",
+                      "연한 파란색(text-blue-100) 소형 텍스트로 서비스 목적을 설명합니다."
+                    ]
+                  },
                   {
                     "id": "area-2-1-0-1",
                     "name": "총 이용 한도",
@@ -462,8 +484,8 @@
         },
         {
           "step": 7,
-          "component": "카드 상세 페이지",
-          "component_id": "comp-2-2",
+          "component": "개별 카드 상세",
+          "component_id": "comp-2-2-0",
           "area": "카드 상세 정보 및 상태 패널",
           "area_id": "area-2-2-1",
           "action": "사용자가 상단 카드 정보 패널에서 카드명, 마스킹 번호, 이용 한도, 결제 예정 금액을 확인합니다.",
@@ -530,7 +552,7 @@
       "comp2_1_1_1":   "comp-2-1-1-1",
       "area2_1_1_1_1": "comp-2-1-1-1",
       "comp2_2":       "comp-2-2",
-      "area2_2_1":     "area-2-2-1",
+      "area2_2_1":     "comp-2-2-0",
       "comp2_2_1":     "comp-2-2-1",
       "area2_2_1_1":   "comp-2-2-1",
       "comp2_2_2":     "comp-2-2-2",

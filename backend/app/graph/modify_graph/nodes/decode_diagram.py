@@ -18,20 +18,40 @@ from backend.app.llm.openai_client import generate_text
 from backend.app.llm.prompts import DECODE_DIAGRAM_SYSTEM_PROMPT
 
 
+def _get_hierarchy_chain(id_str: str) -> List[str]:
+    """
+    area-2-2-0-3 → ["area-2-2-0-3", "comp-2-2-0"]  (직접 ID + 직속 부모 1단계)
+    comp-2-2-0   → ["comp-2-2-0",   "comp-2-2"]
+    조상 전체를 올라가면 상위 노드까지 과도 매칭되므로 부모 1단계만 반환한다.
+    """
+    chain = [id_str]
+    for prefix in ("area-", "comp-"):
+        if id_str.startswith(prefix):
+            parts = id_str[len(prefix):].split("-")
+            if len(parts) >= 2:
+                chain.append("comp-" + "-".join(parts[:-1]))
+            break
+    return chain
+
+
 def _find_target_node_ids(
     target_hier_ids: List[str],
     diagram_node_map: Dict[str, str],
 ) -> List[str]:
     """
-    diagram_node_map에서 값(hierarchy ID)이 target_hier_ids 중 하나와 일치하는
-    키(Mermaid 노드 ID) 목록을 반환한다.
+    diagram_node_map에서 값(hierarchy ID)이 target_hier_ids 중 하나(또는 그 부모 계층)와
+    일치하는 키(Mermaid 노드 ID) 목록을 반환한다.
+    계층 체인 매칭: area-2-2-0-3 선택 시 comp-2-2-0, comp-2-2 까지 탐색한다.
     """
     if not target_hier_ids or not diagram_node_map:
         return []
+    chains = [_get_hierarchy_chain(tid) for tid in target_hier_ids]
     result = []
     for node_id, hier_id in diagram_node_map.items():
-        if hier_id in target_hier_ids:
-            result.append(node_id)
+        for chain in chains:
+            if hier_id in chain:
+                result.append(node_id)
+                break
     return result
 
 
