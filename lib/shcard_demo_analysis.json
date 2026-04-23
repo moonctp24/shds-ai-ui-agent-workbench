@@ -22,7 +22,7 @@
           },
           {
             "id": "area-1-2",
-            "name": "내비게이션 메뉴",
+            "name": "대시보드 이동",
             "source_file": "src/components/Header.tsx",
             "component_name": "Header",
             "code": "        <nav className=\"flex items-center gap-4 text-sm text-slate-600\">\n          <Link\n            href=\"/\"\n            className=\"rounded-full px-3 py-1 hover:bg-slate-100 hover:text-slate-900\"\n          >\n            대시보드\n          </Link>\n        </nav>",
@@ -462,8 +462,8 @@
         },
         {
           "step": 7,
-          "component": "카드 상세 페이지",
-          "component_id": "comp-2-2",
+          "component": "개별 카드 상세",
+          "component_id": "comp-2-2-0",
           "area": "카드 상세 정보 및 상태 패널",
           "area_id": "area-2-2-1",
           "action": "사용자가 상단 카드 정보 패널에서 카드명, 마스킹 번호, 이용 한도, 결제 예정 금액을 확인합니다.",
@@ -530,7 +530,7 @@
       "comp2_1_1_1":   "comp-2-1-1-1",
       "area2_1_1_1_1": "comp-2-1-1-1",
       "comp2_2":       "comp-2-2",
-      "area2_2_1":     "area-2-2-1",
+      "area2_2_1":     "comp-2-2-0",
       "comp2_2_1":     "comp-2-2-1",
       "area2_2_1_1":   "comp-2-2-1",
       "comp2_2_2":     "comp-2-2-2",
