@@ -273,15 +273,26 @@ export default function WorkspacePage() {
     const strikethroughAreaIds = checkedKeys.filter(k => strikethroughItems[k])
     const modifyAreaIds = checkedKeys.filter(k => !strikethroughItems[k])
 
-    // 수정 텍스트 + 삭제 텍스트([삭제] 접두어)를 모두 포함해 LLM에 전달
-    const modifyTexts = modifyAreaIds.map(k => editedDescriptions[k] ?? "").filter(Boolean)
+    // areas 배열에서 ID로 항목 이름 조회하는 헬퍼
+    const getAreaName = (areaId: string): string =>
+      (selection.data as any).areas?.find((a: any) => a.id === areaId)?.name ?? ""
+
+    // 수정 텍스트: 항목 이름 + 추가 입력(있으면)
+    const modifyTexts = modifyAreaIds.map(k => {
+      const name = getAreaName(k)
+      const extra = (editedDescriptions[k] ?? "").trim()
+      return extra ? `${name}\n→ ${extra}` : name
+    }).filter(Boolean)
+
+    // 삭제 텍스트: [삭제] + 항목 이름
     const deleteTexts = strikethroughAreaIds
-      .map(k => editedDescriptions[k] ?? "")
+      .map(k => getAreaName(k))
       .filter(Boolean)
-      .map(t => `[삭제] ${t}`)
+      .map(n => `[삭제] ${n}`)
+
     const addedTexts = addedItems.map(item => item.text.trim()).filter(Boolean)
 
-    if (modifyTexts.length === 0 && deleteTexts.length === 0 && addedTexts.length === 0) {
+    if (checkedKeys.length === 0 && addedTexts.length === 0) {
       setModifyError("수정할 항목을 선택하거나 추가해주세요.")
       isModifyingRef.current = false
       return
@@ -667,13 +678,14 @@ export default function WorkspacePage() {
                         const key = area.id
                         const checked = checkedDescriptions[key] ?? false
                         const isStrikethrough = checked && (strikethroughItems[key] ?? false)
-                        const editedText = editedDescriptions[key] ?? area.name
+                        // editedDescriptions[key]는 이제 "추가 입력 텍스트"만 저장 (원본 area.name은 readonly 표시)
+                        const additionalText = editedDescriptions[key] ?? ""
 
                         const toggleCheck = () => {
                           const next = !checked
                           setCheckedDescriptions(prev => ({ ...prev, [key]: next }))
                           if (next) {
-                            setEditedDescriptions(prev => ({ ...prev, [key]: area.name }))
+                            setEditedDescriptions(prev => ({ ...prev, [key]: "" }))
                           } else {
                             setEditedDescriptions(prev => {
                               const n = { ...prev }
@@ -710,21 +722,25 @@ export default function WorkspacePage() {
                             {checked ? (
                               isStrikethrough ? (
                                 <span className="flex-1 text-[16px] text-red-400 line-through leading-relaxed whitespace-pre-line opacity-70">
-                                  {editedText}
+                                  {area.name}
                                 </span>
                               ) : (
-                                <textarea
-                                  value={editedText}
-                                  onChange={(e) =>
-                                    setEditedDescriptions(prev => ({ ...prev, [key]: e.target.value }))
-                                  }
-                                  rows={Math.max(2, Math.ceil(editedText.length / 28))}
-                                  className={`
-                                  flex-1 text-[16px] text-[#0f172a] resize-none 
-                                  ${editedText.length > 1 ? 'bg-white border-2 border-solid ' : 'focus:outline-none bg-transparent border-none '} 
-                                  min-h-[60px] leading-relaxed
-                                `}
-                                />
+                                <div className="flex-1 flex flex-col gap-2">
+                                  {/* 원본 텍스트: readonly */}
+                                  <span className="text-[16px] text-[#0f172a] leading-relaxed whitespace-pre-line select-none">
+                                    {area.name}
+                                  </span>
+                                  {/* 추가 수정 요청 입력 */}
+                                  <textarea
+                                    value={additionalText}
+                                    onChange={(e) =>
+                                      setEditedDescriptions(prev => ({ ...prev, [key]: e.target.value }))
+                                    }
+                                    placeholder="수정 요청 내용을 입력하세요..."
+                                    rows={2}
+                                    className="text-[15px] text-[#0f172a] resize-none bg-white border border-[#c8d2e1] rounded-md px-3 py-2 leading-relaxed placeholder:text-[#94a3b8] focus:outline-none focus:border-[#8b5cf6] focus:ring-1 focus:ring-[#8b5cf6]"
+                                  />
+                                </div>
                               )
                             ) : (
                               <span className="flex-1 text-[16px] text-[#0f172a] leading-relaxed whitespace-pre-line">{area.name}</span>
@@ -834,7 +850,7 @@ export default function WorkspacePage() {
                         <rect x="11.4167" y="11.395" width="3.83333" height="3.85498" stroke="#fff" strokeWidth="1.5" />
                         <path d="M13.3333 10.645V8.41373H8.2222M3.11108 10.645V8.41373H8.2222M8.2222 8.41373V4.84375" stroke="#fff" />
                       </svg>
-                      <span className="text-[22px] font-medium">{modifyLoading ? "분석설계 수정 중..." : "분석설계 수정"}</span>
+                      <span className="text-[22px] font-medium">{modifyLoading ? "분석설계 중..." : "분석설계"}</span>
                     </button>
                     {modifyError && (
                       <p className="text-[16px] text-red-500 mt-1.5">{modifyError}</p>
