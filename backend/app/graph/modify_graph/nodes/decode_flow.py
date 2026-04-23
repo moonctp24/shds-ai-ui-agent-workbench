@@ -1,10 +1,11 @@
 """
 decode_flow 노드: 2단계로 플로우를 갱신한다.
-  Phase 1 — LLM이 수정 요청에 따라 영향받는 step 번호만 분류
-  Phase 2 — 해당 step들만 문구를 갱신한 뒤, 나머지는 원본과 병합
 
-이렇게 하면 전체 플로우를 한 번에 재생성할 때 생기는
-‘문장만 살짝 바뀐 step이 전부 하이라이트’ 문제를 줄인다.
+  Phase 1 — step 탐색 우선순위:
+    ① checked_area_ids (체크된 area ID 목록) — 가장 정밀한 매핑
+    ② area_id (선택된 컴포넌트 ID) — 컴포넌트 단위 매핑
+    ③ LLM 폴백 — 위 두 가지 모두 매핑 실패 시
+  Phase 2 — 영향 step들만 LLM으로 문구 갱신, 나머지는 원본 병합
 """
 from __future__ import annotations
 
@@ -46,6 +47,27 @@ def _valid_step_numbers(flow: Dict[str, Any]) -> set[int]:
     return {s["step"] for s in flow.get("steps", []) if "step" in s}
 
 
+def _find_affected_steps_by_ids(
+    original_flow: Dict[str, Any],
+    target_ids: List[str],
+) -> List[int]:
+    """
+    flow step 내 area_id 또는 component_id 가 target_ids 중 하나와 일치하는
+    step 번호 목록을 반환한다.
+    """
+    matched: List[int] = []
+    for step in original_flow.get("steps", []):
+        if not isinstance(step, dict):
+            continue
+        step_area_id = step.get("area_id", "")
+        step_comp_id = step.get("component_id", "")
+        if step_area_id in target_ids or step_comp_id in target_ids:
+            step_num = step.get("step")
+            if isinstance(step_num, int):
+                matched.append(step_num)
+    return sorted(set(matched))
+
+
 def _build_phase1_user_prompt(
     original_flow: Dict[str, Any], modification_request: str
 ) -> str:
@@ -82,6 +104,8 @@ def _merge_partial_into_flow(
 def decode_flow_node(state: Dict[str, Any]) -> Dict[str, Any]:
     original_flow: Dict[str, Any] | None = state.get("original_flow")
     modification_request: str = state.get("modification_request", "")
+    area_id: str = state.get("area_id", "")
+    checked_area_ids: List[str] = state.get("checked_area_ids") or []
 
     if not original_flow or not modification_request:
         return {}
@@ -90,30 +114,57 @@ def decode_flow_node(state: Dict[str, Any]) -> Dict[str, Any]:
     if not valid:
         return {}
 
-    # ── Phase 1: 영향 step 번호만 분류 ─────────────────────────────────────
-    try:
-        phase1 = generate_json(
-            FLOW_AFFECTED_STEPS_SYSTEM_PROMPT,
-            _build_phase1_user_prompt(original_flow, modification_request),
-        )
-    except Exception as e:
-        print(f"[decode_flow_node] Phase1 LLM error: {e}", flush=True)
-        return {"modified_flow": original_flow, "flow_changed_steps": []}
-
-    raw_affected = phase1.get("affected_steps") or phase1.get("affected_step_numbers")
-    if not isinstance(raw_affected, list):
-        raw_affected = []
-
     affected: List[int] = []
-    for x in raw_affected:
-        if isinstance(x, int) and x in valid:
-            affected.append(x)
-        elif isinstance(x, str) and x.isdigit():
-            n = int(x)
-            if n in valid:
-                affected.append(n)
 
-    affected = sorted(set(affected))
+    # ── ① checked_area_ids 우선 탐색 (가장 정밀) ────────────────────────────
+    if checked_area_ids:
+        affected = _find_affected_steps_by_ids(original_flow, checked_area_ids)
+        if affected:
+            print(
+                f"[decode_flow_node] checked_area_ids 매핑 성공 "
+                f"— ids={checked_area_ids}, steps={affected}",
+                flush=True,
+            )
+
+    # ── ② area_id(컴포넌트 ID) 폴백 ─────────────────────────────────────────
+    if not affected and area_id:
+        affected = _find_affected_steps_by_ids(original_flow, [area_id])
+        if affected:
+            print(
+                f"[decode_flow_node] area_id(컴포넌트) 매핑 성공 "
+                f"— area_id={area_id!r}, steps={affected}",
+                flush=True,
+            )
+
+    # ── ③ LLM Phase 1 폴백 ──────────────────────────────────────────────────
+    if not affected:
+        print(
+            f"[decode_flow_node] ID 매핑 실패 "
+            f"(checked_area_ids={checked_area_ids}, area_id={area_id!r}), LLM 폴백",
+            flush=True,
+        )
+        try:
+            phase1 = generate_json(
+                FLOW_AFFECTED_STEPS_SYSTEM_PROMPT,
+                _build_phase1_user_prompt(original_flow, modification_request),
+            )
+        except Exception as e:
+            print(f"[decode_flow_node] Phase1 LLM error: {e}", flush=True)
+            return {"modified_flow": original_flow, "flow_changed_steps": []}
+
+        raw_affected = phase1.get("affected_steps") or phase1.get("affected_step_numbers")
+        if not isinstance(raw_affected, list):
+            raw_affected = []
+
+        for x in raw_affected:
+            if isinstance(x, int) and x in valid:
+                affected.append(x)
+            elif isinstance(x, str) and x.isdigit():
+                n = int(x)
+                if n in valid:
+                    affected.append(n)
+
+        affected = sorted(set(affected))
 
     if not affected:
         return {
@@ -129,7 +180,7 @@ def decode_flow_node(state: Dict[str, Any]) -> Dict[str, Any]:
     }
     subset = [copy.deepcopy(step_by_num[n]) for n in affected if n in step_by_num]
 
-    # ── Phase 2: 해당 step만 문구 갱신 ─────────────────────────────────────
+    # ── Phase 2: 해당 step만 LLM으로 문구 갱신 ──────────────────────────────
     try:
         phase2 = generate_json(
             DECODE_FLOW_PARTIAL_SYSTEM_PROMPT,
@@ -145,7 +196,7 @@ def decode_flow_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
     merged = _merge_partial_into_flow(original_flow, partial_list)
 
-    # 하이라이트: 병합 후 실제로 필드가 달라진 step만 (영향 목록에 있어도 문구 동일이면 제외)
+    # 하이라이트: 병합 후 실제로 필드가 달라진 step만
     flow_changed = _find_changed_steps(original_flow, merged)
 
     return {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -11,7 +11,10 @@ router = APIRouter()
 
 
 class ModifyCodeRequest(BaseModel):
-    area_id: str = Field(..., description="수정할 Area의 ID (analyze-repo 응답의 area id)")
+    area_id: str = Field(..., description="선택된 컴포넌트 ID (코드 수집 기준)")
+    checked_area_ids: Optional[List[str]] = Field(
+        default=None, description="체크된 area ID 목록 — flow/diagram 정밀 매핑에 사용"
+    )
     source_file: str = Field(..., description="대상 파일 상대 경로")
     original_code: str = Field(default="", description="원본 코드 (area 선택 시 필수, component 선택 시 생략 가능)")
     modification_request: str = Field(..., description="자연어 수정 요청 (한국어)")
@@ -20,6 +23,9 @@ class ModifyCodeRequest(BaseModel):
     )
     original_diagram: Optional[str] = Field(
         default=None, description="분석 단계에서 생성된 원본 Mermaid 다이어그램 (선택적)"
+    )
+    diagram_node_map: Optional[Dict[str, Any]] = Field(
+        default=None, description="Mermaid 노드 ID → hierarchy ID 매핑 (ID 기반 탐색용, 선택적)"
     )
 
 
@@ -47,10 +53,14 @@ def modify_code(payload: ModifyCodeRequest) -> dict:
             "original_code": payload.original_code,
             "modification_request": payload.modification_request,
         }
+        if payload.checked_area_ids:
+            invoke_input["checked_area_ids"] = payload.checked_area_ids
         if payload.original_flow:
             invoke_input["original_flow"] = payload.original_flow
         if payload.original_diagram:
             invoke_input["original_diagram"] = payload.original_diagram
+        if payload.diagram_node_map:
+            invoke_input["diagram_node_map"] = payload.diagram_node_map
 
         result = graph.invoke(invoke_input)
 
