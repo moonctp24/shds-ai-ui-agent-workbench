@@ -1,7 +1,7 @@
 {
   "type": "result",
   "data": {
-    "repository": "shcard_demo",
+    "repository": "분석설계 자동화 데모",
     "components": [
       {
         "id": "comp-1",

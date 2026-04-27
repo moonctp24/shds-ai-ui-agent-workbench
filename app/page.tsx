@@ -620,7 +620,7 @@ export default function WorkspacePage() {
             </div>
 
             <div className="flex-1 flex flex-col p-5 overflow-hidden">
-              <div className="flex gap-2 mb-4">
+              {/* <div className="flex gap-2 mb-4">
                 <button
                   onClick={() => setActiveRenderMode("batch")}
                   className={`flex-1 h-13 rounded-lg flex items-center justify-center gap-2 text-[16px] font-medium transition-colors ${activeRenderMode === "batch"
@@ -645,13 +645,13 @@ export default function WorkspacePage() {
                   </svg>
                   개별 UI렌더링
                 </button>
-              </div>
+              </div> */}
 
               <div className="flex items-center justify-between mb-3 mt-5">
                 <span className="text-[16px] font-semibold text-[#475569] tracking-widest">SCENARIO EDITOR</span>
-                <span className="px-2 py-1 bg-[#f1f5f9] text-[#64748b] text-[16px] font-medium rounded">
+                {/* <span className="px-2 py-1 bg-[#f1f5f9] text-[#64748b] text-[16px] font-medium rounded">
                   Auto Saved
-                </span>
+                </span> */}
               </div>
 
               {!selection || selection.type !== "component" ? (
