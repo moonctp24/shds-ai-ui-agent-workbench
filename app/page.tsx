@@ -176,6 +176,7 @@ function componentIdDepthForFlow(compId: string): number {
  * flow step ↔ 선택 area id 매칭
  * - 기존: getHierarchyChain 2칸만 (직속 부모 comp) — 말단 area-2-1-0-1 는 flow의 comp-2-1(step4) / area-2-1-1과 안 맞아 하이라이트 0건
  * - 보완: area 소속 comp의 조상 comp 전부와 비교, 같은 선택에 comp-2^comp-2-1 둘 다 맞을 땐 더 깊은 sCompId step만( step1 루트 제거 )
+ * - chain2에 직속 부모 comp가 있으므로, `chain2.includes(sCompId)`만으로는 동일 comp 내 형제 area 스텝까지 잡힘 → area_id 없는 step일 때만 comp로 단축 매칭
  */
 function getFlowStepNumbersForAreaIds(flow: Flow | null | undefined, areaIds: string[]): number[] {
   if (!flow || areaIds.length === 0) return []
@@ -191,11 +192,14 @@ function getFlowStepNumbersForAreaIds(flow: Flow | null | undefined, areaIds: st
     for (const step of flow.steps) {
       const sAreaId = (step as { area_id?: string }).area_id ?? ""
       const sCompId = (step as { component_id?: string }).component_id ?? ""
+      // chain2 = [self, 직속 부모 comp]. sCompId만 겹칠 때(동일 comp 아래 형제 area) 는 매칭하면 안 됨 —
+      // 예: area-2-2-2-3 선택 시 comp-2-2-2 는 chain에 있어 분실(area-2-2-2-4) step까지 inShort가 되던 문제
+      const stepHasArea = Boolean(sAreaId)
       const inShort =
-        chain2.includes(sAreaId) ||
-        chain2.includes(sCompId) ||
         sAreaId === selId ||
-        sCompId === selId
+        sCompId === selId ||
+        (sAreaId && chain2.includes(sAreaId)) ||
+        (chain2.includes(sCompId) && !stepHasArea)
       if (inShort) {
         shortMatch.push({ step: step.step, sComp: sCompId, sArea: sAreaId })
       } else if (sCompId && compAncestors.has(sCompId)) {
