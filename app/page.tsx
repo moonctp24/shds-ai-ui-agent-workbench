@@ -137,9 +137,102 @@ function getHierarchyChain(id: string): string[] {
   return chain
 }
 
+/** comp-2-1-0-1 → [comp-2-1-0, comp-2-1, comp-2] / comp-2-1-1-1 → [self…] (flow step의 sCompId가 말단 직상위~루트와 맞을 때) */
+function getAncestorComponentIds(id: string): string[] {
+  const out: string[] = []
+  let comp: string | null = null
+  if (id.startsWith("area-")) {
+    const parts = id.slice("area-".length).split("-")
+    if (parts.length < 2) return out
+    comp = "comp-" + parts.slice(0, -1).join("-")
+  } else if (id.startsWith("comp-")) {
+    comp = id
+  } else {
+    return out
+  }
+  let c: string | null = comp
+  while (c && c.startsWith("comp-")) {
+    out.push(c)
+    const rest = c.slice("comp-".length)
+    const segs = rest.split("-")
+    if (segs.length <= 1) break
+    c = "comp-" + segs.slice(0, -1).join("-")
+  }
+  return out
+}
+
 type Flow = {
   title: string
   steps: FlowStep[]
+}
+
+/** sComp-2-1-1-1 → 깊이 4 (flow에서 "가장 구체적" step 선별용) */
+function componentIdDepthForFlow(compId: string): number {
+  if (!compId || !compId.startsWith("comp-")) return 0
+  return compId.slice("comp-".length).split("-").filter(Boolean).length
+}
+
+/**
+ * flow step ↔ 선택 area id 매칭
+ * - 기존: getHierarchyChain 2칸만 (직속 부모 comp) — 말단 area-2-1-0-1 는 flow의 comp-2-1(step4) / area-2-1-1과 안 맞아 하이라이트 0건
+ * - 보완: area 소속 comp의 조상 comp 전부와 비교, 같은 선택에 comp-2^comp-2-1 둘 다 맞을 땐 더 깊은 sCompId step만( step1 루트 제거 )
+ */
+function getFlowStepNumbersForAreaIds(flow: Flow | null | undefined, areaIds: string[]): number[] {
+  if (!flow || areaIds.length === 0) return []
+  const out = new Set<number>()
+
+  for (const selId of areaIds) {
+    const chain2 = getHierarchyChain(selId)
+    const compAncestors = new Set(getAncestorComponentIds(selId))
+
+    const shortMatch: { step: number; sComp: string; sArea: string }[] = []
+    const ancCompMatch: { step: number; sComp: string }[] = []
+
+    for (const step of flow.steps) {
+      const sAreaId = (step as { area_id?: string }).area_id ?? ""
+      const sCompId = (step as { component_id?: string }).component_id ?? ""
+      const inShort =
+        chain2.includes(sAreaId) ||
+        chain2.includes(sCompId) ||
+        sAreaId === selId ||
+        sCompId === selId
+      if (inShort) {
+        shortMatch.push({ step: step.step, sComp: sCompId, sArea: sAreaId })
+      } else if (sCompId && compAncestors.has(sCompId)) {
+        ancCompMatch.push({ step: step.step, sComp: sCompId })
+      }
+    }
+
+    if (shortMatch.length > 0) {
+      for (const m of shortMatch) out.add(m.step)
+      continue
+    }
+    if (ancCompMatch.length > 0) {
+      const maxD = Math.max(...ancCompMatch.map((m) => componentIdDepthForFlow(m.sComp)))
+      for (const m of ancCompMatch) {
+        if (componentIdDepthForFlow(m.sComp) === maxD) out.add(m.step)
+      }
+    }
+  }
+  return [...out].sort((a, b) => a - b)
+}
+
+/** diagram node map: 체크한 area id 체인에 매핑되는 mermaid node id */
+function getDiagramNodeIdsForAreaIds(
+  diagramNodeMap: Record<string, string>,
+  areaIds: string[]
+): string[] {
+  if (areaIds.length === 0 || Object.keys(diagramNodeMap).length === 0) return []
+  const out: string[] = []
+  for (const [nodeId, hierId] of Object.entries(diagramNodeMap)) {
+    for (const selId of areaIds) {
+      if (getHierarchyChain(selId).includes(hierId)) {
+        out.push(nodeId)
+        break
+      }
+    }
+  }
+  return out
 }
 
 type Hierarchy = {
@@ -181,6 +274,21 @@ const collectAreaCodes = (comp: Component): string => {
   return parts.join("\n\n")
 }
 
+/** 체크된 area id에 해당하는 코드만 수집 — 부모 컴포넌트 선택 시 b만 고치면 a,c,d는 요청/비교에 포함되지 않음(말단 선택과 동일한 스코프) */
+const collectAreaCodesForIds = (comp: Component, idSet: ReadonlySet<string>): string => {
+  const parts: string[] = []
+  for (const area of comp.areas ?? []) {
+    if (area.code && idSet.has(area.id)) {
+      parts.push(`// [${comp.name} > ${area.name}]\n${area.code}`)
+    }
+  }
+  for (const child of comp.children ?? []) {
+    const childCode = collectAreaCodesForIds(child, idSet)
+    if (childCode) parts.push(childCode)
+  }
+  return parts.join("\n\n")
+}
+
 /** 본인 areas + 모든 하위 자손의 areas (깊이 우선, 선위 컴포넌트 먼저) */
 const collectAllAreasInSubtree = (comp: Component): Area[] => {
   const out: Area[] = []
@@ -191,6 +299,18 @@ const collectAllAreasInSubtree = (comp: Component): Area[] => {
     out.push(...collectAllAreasInSubtree(ch))
   }
   return out
+}
+
+/**
+ * 마이크로 요구사항 표시용: 자식 컴포넌트가 있으면 본인 `areas`(섹션 타이틀·요약)는 쓰지 않고
+ * 하위로만 내려가며, `children`이 없는 리프 컴포넌트의 `areas`만 수집한다.
+ */
+const collectLeafComponentAreasInSubtree = (comp: Component): Area[] => {
+  const ch = comp.children ?? []
+  if (ch.length > 0) {
+    return ch.flatMap((c) => collectLeafComponentAreasInSubtree(c))
+  }
+  return [...(comp.areas ?? [])]
 }
 
 /** Project Tree 초기 로드 시 전체 comp 노드 펼침용 id 목록 */
@@ -228,7 +348,7 @@ export default function WorkspacePage() {
 
   const microRequirementAreas = useMemo((): Area[] => {
     if (!selection || selection.type !== "component") return []
-    return collectAllAreasInSubtree(selection.data)
+    return collectLeafComponentAreasInSubtree(selection.data)
   }, [selection])
 
   const [modifyLoading, setModifyLoading] = useState(false)
@@ -359,45 +479,21 @@ export default function WorkspacePage() {
     setModifyError(null)
     setModifyResult(null)
 
-    // ── 하이라이트 계산 (계층 체인 매핑 기반, ID 매핑만 사용) ────────────────
-    // FLOW: 삭제 예정 항목만 프론트 계산 (수정 항목은 백엔드 flow_changed_steps 사용)
-    const newDeletedSteps: number[] = []
-    if (strikethroughAreaIds.length > 0 && flow) {
-      for (const step of flow.steps) {
-        const sAreaId = (step as any).area_id ?? ""
-        const sCompId = (step as any).component_id ?? ""
-        for (const selId of strikethroughAreaIds) {
-          const chain = getHierarchyChain(selId)
-          if (chain.includes(sAreaId) || chain.includes(sCompId)) {
-            newDeletedSteps.push(step.step)
-            break
-          }
-        }
-      }
-    }
+    // ── 하이라이트: 말단 area id ↔ flow/diagram (getHierarchyChain)만 — 백엔드 flow/diagram id 목록은 사용 안 함
+    const newDeletedSteps = getFlowStepNumbersForAreaIds(flow, strikethroughAreaIds)
     setFlowDeletedSteps(newDeletedSteps)
-
-    // DIAGRAM: 수정+삭제 모든 체크 항목에서 프론트 ID 매핑으로만 계산
-    // LLM의 diagram_changed_nodes는 의미 매칭 오류가 있으므로 사용하지 않음
-    const newHighlightNodes: string[] = []
-    if (checkedKeys.length > 0 && Object.keys(diagramNodeMap).length > 0) {
-      for (const [nodeId, hierId] of Object.entries(diagramNodeMap)) {
-        for (const selId of checkedKeys) {
-          if (getHierarchyChain(selId).includes(hierId)) {
-            newHighlightNodes.push(nodeId)
-            break
-          }
-        }
-      }
-    }
-    setDiagramDeletedNodes(newHighlightNodes)
+    setDiagramDeletedNodes(getDiagramNodeIdsForAreaIds(diagramNodeMap, checkedKeys))
 
     // 삭제 포함 전체 modification_request → LLM 전달
     const modificationRequest = [...modifyTexts, ...deleteTexts, ...addedTexts].join("\n")
 
     try {
       const data = selection.data
-      const origCode = collectAreaCodes(data)
+      // 체크된 area만 original_code에 넣어 LLM이 나머지(a,c,d)를 지우는 문제 방지. (추가 항목만 있을 땐 기존처럼 전체 문맥)
+      const origCode =
+        checkedKeys.length > 0
+          ? collectAreaCodesForIds(data, new Set(checkedKeys))
+          : collectAreaCodes(data)
       // checked_area_ids: 수정+삭제 모두 포함해 백엔드 ID 매핑에 활용
       const res = await api.post("/api/modify-code", {
         area_id: data.id,
@@ -411,9 +507,9 @@ export default function WorkspacePage() {
       })
       setModifyResult(res.data)
       setMinorVersion(prev => prev + 1)
-      // flow/diagram 내용은 기존 그대로 유지 — 수정이 필요한 위치만 하이라이트
-      setFlowChangedSteps(res.data.flow_changed_steps ?? [])
-      setDiagramChangedNodes(res.data.diagram_changed_nodes ?? [])
+      // 수정 위치: 부모 comp 선택이어도 체크한 말단 area_id와만 매핑 (백엔드 step 목록은 과도할 수 있음)
+      setFlowChangedSteps(getFlowStepNumbersForAreaIds(flow, modifyAreaIds))
+      setDiagramChangedNodes(getDiagramNodeIdsForAreaIds(diagramNodeMap, modifyAreaIds))
       setActiveTab("FLOW")
     } catch (e: any) {
       const msg =
@@ -677,7 +773,7 @@ export default function WorkspacePage() {
                   <p className="text-[16px] text-[#94a3b8]">항목을 선택하세요.</p>
                 </div>
               ) : microRequirementAreas.length > 0 ? (
-                /* 본인+하위의 마이크로 요구사항(합산) + 원문 */
+                /* 하위 리프 컴포넌트 areas만(섹션 타이틀 제외) + 원문 */
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                   {/* 원문 섹션 */}
                   <div>
