@@ -181,6 +181,18 @@ const collectAreaCodes = (comp: Component): string => {
   return parts.join("\n\n")
 }
 
+/** 본인 areas + 모든 하위 자손의 areas (깊이 우선, 선위 컴포넌트 먼저) */
+const collectAllAreasInSubtree = (comp: Component): Area[] => {
+  const out: Area[] = []
+  for (const a of comp.areas ?? []) {
+    out.push(a)
+  }
+  for (const ch of comp.children ?? []) {
+    out.push(...collectAllAreasInSubtree(ch))
+  }
+  return out
+}
+
 /** Project Tree 초기 로드 시 전체 comp 노드 펼침용 id 목록 */
 const collectAllComponentIds = (components: Component[]): string[] => {
   const ids: string[] = []
@@ -213,6 +225,11 @@ export default function WorkspacePage() {
       ? { type: "component", data: INITIAL_DATA.components[0] as Component }
       : null
   )
+
+  const microRequirementAreas = useMemo((): Area[] => {
+    if (!selection || selection.type !== "component") return []
+    return collectAllAreasInSubtree(selection.data)
+  }, [selection])
 
   const [modifyLoading, setModifyLoading] = useState(false)
   const isModifyingRef = useRef(false)   // 동기 가드: 중복 호출 방지
@@ -287,6 +304,10 @@ export default function WorkspacePage() {
 
   const handleModify = async () => {
     if (!selection) return
+    if (selection.type !== "component") {
+      isModifyingRef.current = false
+      return
+    }
     if (isModifyingRef.current) return   // 이미 요청 중이면 즉시 차단
     isModifyingRef.current = true
 
@@ -298,9 +319,9 @@ export default function WorkspacePage() {
     const strikethroughAreaIds = checkedKeys.filter(k => strikethroughItems[k])
     const modifyAreaIds = checkedKeys.filter(k => !strikethroughItems[k])
 
-    // areas 배열에서 ID로 항목 이름 조회하는 헬퍼
+    // 하위 합산 areas에서 ID로 항목 이름 조회
     const getAreaName = (areaId: string): string =>
-      (selection.data as any).areas?.find((a: any) => a.id === areaId)?.name ?? ""
+      collectAllAreasInSubtree(selection.data).find(a => a.id === areaId)?.name ?? ""
 
     // 수정 텍스트: 항목 이름 + 추가 입력(있으면)
     const modifyTexts = modifyAreaIds.map(k => {
@@ -376,10 +397,7 @@ export default function WorkspacePage() {
 
     try {
       const data = selection.data
-      const isArea = selection.type === "area"
-      const origCode = isArea
-        ? (data as any).code ?? ""
-        : collectAreaCodes(data as Component)
+      const origCode = collectAreaCodes(data)
       // checked_area_ids: 수정+삭제 모두 포함해 백엔드 ID 매핑에 활용
       const res = await api.post("/api/modify-code", {
         area_id: data.id,
@@ -658,31 +676,8 @@ export default function WorkspacePage() {
                 <div className="flex-1 border-2 border-dashed border-[#c8d2e1] rounded-xl h-full flex items-center justify-center mb-4">
                   <p className="text-[16px] text-[#94a3b8]">항목을 선택하세요.</p>
                 </div>
-              ) : (selection.data.children?.length ?? 0) > 0 ? (
-                /* 비리프 comp (자식 있음) → description 줄글 */
-                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-                  <div>
-                    <h3 className="text-[16px] font-medium text-[#475569] mb-2 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
-                      {"원문"}
-                    </h3>
-                    <div className="flex-1 bg-[#e4eaf2] rounded-xl p-4 min-h-[140px]">
-                      <ul className="space-y-1.5 list-none">
-                        {(Array.isArray(selection.data.description)
-                          ? selection.data.description
-                          : [selection.data.description ?? ""]
-                        ).filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((sentence, i) => (
-                          <li key={i} className="flex items-start gap-2 text-[16px] text-[#64748b] leading-relaxed">
-                            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
-                            <span>{sentence}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              ) : selection.data.areas.length > 0 ? (
-                /* 리프 comp (자식 없음, areas 있음) → area name 체크박스 리스트 */
+              ) : microRequirementAreas.length > 0 ? (
+                /* 본인+하위의 마이크로 요구사항(합산) + 원문 */
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                   {/* 원문 섹션 */}
                   <div>
@@ -712,7 +707,7 @@ export default function WorkspacePage() {
                     </h3>
                     <p className="text-[14px] text-[#94a3b8] mb-3">{"항목을 선택하면 직접 편집할 수 있습니다."}</p>
                     <div className="space-y-2">
-                      {selection.data.areas.map((area) => {
+                      {microRequirementAreas.map((area) => {
                         const key = area.id
                         const checked = checkedDescriptions[key] ?? false
                         const isStrikethrough = checked && (strikethroughItems[key] ?? false)
@@ -848,8 +843,31 @@ export default function WorkspacePage() {
                     </div>
                   </div>
                 </div>
+              ) : (selection.data.children?.length ?? 0) > 0 ? (
+                /* 비리프인데 하위 전체에 마이크로 areas 없음 → 원문만 */
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                  <div>
+                    <h3 className="text-[16px] font-medium text-[#475569] mb-2 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
+                      {"원문"}
+                    </h3>
+                    <div className="flex-1 bg-[#e4eaf2] rounded-xl p-4 min-h-[140px]">
+                      <ul className="space-y-1.5 list-none">
+                        {(Array.isArray(selection.data.description)
+                          ? selection.data.description
+                          : [selection.data.description ?? ""]
+                        ).filter((s): s is string => typeof s === "string" && s.trim().length > 0).map((sentence, i) => (
+                          <li key={i} className="flex items-start gap-2 text-[16px] text-[#64748b] leading-relaxed">
+                            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#94a3b8] shrink-0" />
+                            <span>{sentence}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                /* 리프 comp인데 areas도 없는 경우 → description 줄글 */
+                /* 리프인데 areas 없음 → description 줄글 */
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                   <div>
                     <h3 className="text-[16px] font-medium text-[#475569] mb-2 flex items-center gap-1">
