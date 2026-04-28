@@ -35,6 +35,7 @@ import {
   Sparkles,
   Check,
   X,
+  Loader2,
 } from "lucide-react"
 import { api } from "@/lib/api"
 import analysisData from "@/lib/shcard_demo_analysis.json"
@@ -1447,6 +1448,22 @@ export default function WorkspacePage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {modifyLoading && (
+        <div
+          role="alertdialog"
+          aria-busy="true"
+          aria-live="polite"
+          aria-label="분석설계 처리 중"
+          className="fixed inset-0 z-[100] cursor-wait flex items-center justify-center bg-black/20 backdrop-blur-[3px]"
+        >
+            <Loader2
+              className="h-12 w-12 animate-spin text-[#8b5cf6]"
+              strokeWidth={2}
+              aria-hidden
+            />
         </div>
       )}
     </>
