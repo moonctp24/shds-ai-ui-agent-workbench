@@ -1459,11 +1459,16 @@ export default function WorkspacePage() {
           aria-label="분석설계 처리 중"
           className="fixed inset-0 z-[100] cursor-wait flex items-center justify-center bg-black/20 backdrop-blur-[3px]"
         >
-            <Loader2
+            {/* <Loader2
               className="h-12 w-12 animate-spin text-[#8b5cf6]"
               strokeWidth={2}
               aria-hidden
-            />
+            /> */}
+          <div className="flex gap-2">
+            <span className="size-3 animate-ping rounded-full bg-[#8b5cf6]"></span>
+            <span className="size-3 animate-ping rounded-full bg-[#8b5cf6] [animation-delay:0.2s]"></span>
+            <span className="size-3 animate-ping rounded-full bg-[#8b5cf6] [animation-delay:0.4s]"></span>
+          </div>
         </div>
       )}
     </>
